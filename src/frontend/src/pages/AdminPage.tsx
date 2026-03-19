@@ -11,6 +11,7 @@ import { Loader2, Play, Plus, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { TournamentStatus } from "../backend.d";
+import DonationModal from "../components/DonationModal";
 import TournamentCard from "../components/TournamentCard";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
@@ -32,6 +33,7 @@ export default function AdminPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [has3rdPlace, setHas3rdPlace] = useState(false);
+  const [showDonation, setShowDonation] = useState(false);
 
   if (!isLoggedIn) {
     return (
@@ -100,6 +102,7 @@ export default function AdminPage() {
       setName("");
       setDescription("");
       setHas3rdPlace(false);
+      setShowDonation(true);
     } catch {
       toast.error("Failed to create tournament");
     }
@@ -277,6 +280,11 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      <DonationModal
+        open={showDonation}
+        onClose={() => setShowDonation(false)}
+      />
     </div>
   );
 }

@@ -7,6 +7,10 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
+export interface PublicPlayer {
+    isGuest: boolean;
+    name: string;
+}
 export interface Tournament {
     id: bigint;
     status: TournamentStatus;
@@ -51,9 +55,12 @@ export interface backendInterface {
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getTournament(tournamentId: bigint): Promise<Tournament | null>;
+    getTournamentPlayers(tournamentId: bigint): Promise<Array<PublicPlayer>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     joinTournament(tournamentId: bigint): Promise<void>;
+    kickPlayer(tournamentId: bigint, playerName: string): Promise<void>;
+    reorderPlayers(tournamentId: bigint, orderedNames: Array<string>): Promise<void>;
     reportMatch(tournamentId: bigint, round: bigint, slot: bigint, score1: bigint, score2: bigint, winnerId: Principal | null): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     startTournament(tournamentId: bigint): Promise<void>;

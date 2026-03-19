@@ -3,9 +3,6 @@ import { Trophy } from "lucide-react";
 import { SiDiscord, SiTwitch, SiX, SiYoutube } from "react-icons/si";
 
 export default function Footer() {
-  const year = new Date().getFullYear();
-  const hostname = encodeURIComponent(window.location.hostname);
-
   return (
     <footer className="border-t border-border bg-card">
       <div className="container mx-auto px-4 py-12">
@@ -25,30 +22,38 @@ export default function Footer() {
             </p>
             <div className="mt-4 flex gap-3">
               <a
-                href="https://x.com"
+                href="https://twitter.com/rocketjumpzone"
                 aria-label="X/Twitter"
                 className="text-muted-foreground transition-colors hover:text-foreground"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <SiX className="h-4 w-4" />
               </a>
               <a
-                href="https://discord.com"
+                href="https://discord.com/invite/H3MxKRu"
                 aria-label="Discord"
                 className="text-muted-foreground transition-colors hover:text-foreground"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <SiDiscord className="h-4 w-4" />
               </a>
               <a
-                href="https://youtube.com"
+                href="https://www.youtube.com/@rocketjumpzone"
                 aria-label="YouTube"
                 className="text-muted-foreground transition-colors hover:text-foreground"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <SiYoutube className="h-4 w-4" />
               </a>
               <a
-                href="https://twitch.tv"
+                href="https://www.twitch.tv/rocketjumpzone"
                 aria-label="Twitch"
                 className="text-muted-foreground transition-colors hover:text-foreground"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <SiTwitch className="h-4 w-4" />
               </a>
@@ -127,41 +132,13 @@ export default function Footer() {
                 <a
                   href="https://rocketjump.zone"
                   className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   RocketJump Zone
                 </a>
               </li>
-              <li>
-                <a
-                  href="https://rocketjump.zone/players"
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Players
-                </a>
-              </li>
             </ul>
-          </div>
-        </div>
-
-        <div className="mt-8 flex flex-col items-center justify-between gap-2 border-t border-border pt-6 text-xs text-muted-foreground md:flex-row">
-          <span>
-            © {year}. Built with ❤️ using{" "}
-            <a
-              href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${hostname}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-foreground"
-            >
-              caffeine.ai
-            </a>
-          </span>
-          <div className="flex gap-4">
-            <a href="https://rocketjump.zone" className="hover:text-foreground">
-              Legal
-            </a>
-            <a href="https://rocketjump.zone" className="hover:text-foreground">
-              Privacy
-            </a>
           </div>
         </div>
       </div>

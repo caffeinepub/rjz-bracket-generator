@@ -22,6 +22,7 @@ export interface Match {
 }
 export type MatchStatus = { 'scheduled' : null } |
   { 'completed' : null };
+export interface PublicPlayer { 'isGuest' : boolean, 'name' : string }
 export interface Tournament {
   'id' : bigint,
   'status' : TournamentStatus,
@@ -46,9 +47,12 @@ export interface _SERVICE {
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getTournament' : ActorMethod<[bigint], [] | [Tournament]>,
+  'getTournamentPlayers' : ActorMethod<[bigint], Array<PublicPlayer>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'joinTournament' : ActorMethod<[bigint], undefined>,
+  'kickPlayer' : ActorMethod<[bigint, string], undefined>,
+  'reorderPlayers' : ActorMethod<[bigint, Array<string>], undefined>,
   'reportMatch' : ActorMethod<
     [bigint, bigint, bigint, bigint, bigint, [] | [Principal]],
     undefined

@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useParams } from "@tanstack/react-router";
+import { Link, useParams } from "@tanstack/react-router";
 import { Code, Play, Trophy, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import {
   useJoinTournament,
   useStartTournament,
   useTournament,
+  useTournamentPlayers,
   useUserProfile,
 } from "../hooks/useQueries";
 
@@ -27,6 +28,7 @@ export default function TournamentDetailPage() {
   const { data: tournament, isLoading } = useTournament(tournamentId);
   const { data: matches = [], isLoading: matchesLoading } =
     useBracketMatches(tournamentId);
+  const { data: players = [] } = useTournamentPlayers(tournamentId);
   const { data: isAdmin } = useIsAdmin();
   const { data: profile } = useUserProfile();
   const { identity, loginStatus } = useInternetIdentity();
@@ -95,6 +97,8 @@ export default function TournamentDetailPage() {
     );
   }
 
+  const isPendingTournament = tournament.status === TournamentStatus.pending;
+
   return (
     <div className="container mx-auto px-4 py-10">
       {/* Header */}
@@ -115,7 +119,7 @@ export default function TournamentDetailPage() {
         </div>
 
         {/* Actions */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Embed link */}
           <Button
             variant="outline"
@@ -133,7 +137,8 @@ export default function TournamentDetailPage() {
           {/* Join - for logged-in players, pending tournament */}
           {isLoggedIn &&
             !isAdmin &&
-            tournament.status === TournamentStatus.pending && (
+            isPendingTournament &&
+            (profile ? (
               <Button
                 size="sm"
                 onClick={handleJoin}
@@ -144,10 +149,21 @@ export default function TournamentDetailPage() {
                 <UserPlus className="mr-1 h-4 w-4" />
                 {joinTournament.isPending ? "Joining..." : "Register"}
               </Button>
-            )}
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                <Link
+                  to="/profile"
+                  className="font-semibold text-primary underline underline-offset-2 hover:opacity-80"
+                  data-ocid="tournament.profile.link"
+                >
+                  Create a profile
+                </Link>{" "}
+                to register
+              </p>
+            ))}
 
           {/* Admin: Start tournament */}
-          {isAdmin && tournament.status === TournamentStatus.pending && (
+          {isAdmin && isPendingTournament && (
             <Button
               size="sm"
               onClick={handleStart}
@@ -163,7 +179,7 @@ export default function TournamentDetailPage() {
       </div>
 
       {/* Admin: Add Guest Player */}
-      {isAdmin && tournament.status === TournamentStatus.pending && (
+      {isAdmin && isPendingTournament && (
         <div className="mb-6 rounded-lg border border-border bg-card p-4">
           <h3 className="mb-3 font-display text-sm font-bold uppercase tracking-widest text-foreground">
             Add Guest Player
@@ -217,6 +233,8 @@ export default function TournamentDetailPage() {
               currentPlayerName={profile?.name}
               isAdmin={isAdmin}
               readOnly={false}
+              players={players}
+              isPending={isPendingTournament}
             />
           )}
         </div>

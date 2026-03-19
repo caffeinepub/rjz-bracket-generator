@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Link as LinkIcon, Loader2, Save, User } from "lucide-react";
+import { Loader2, Save, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import TournamentCard from "../components/TournamentCard";
@@ -23,12 +23,10 @@ export default function ProfilePage() {
   const saveProfile = useSaveProfile();
 
   const [name, setName] = useState("");
-  const [rjzLink, setRjzLink] = useState("");
 
   useEffect(() => {
     if (profile) {
       setName(profile.name);
-      setRjzLink(profile.rjzProfileLink);
     }
   }, [profile]);
 
@@ -64,7 +62,7 @@ export default function ProfilePage() {
     try {
       await saveProfile.mutateAsync({
         name: name.trim(),
-        rjzProfileLink: rjzLink.trim(),
+        rjzProfileLink: "",
       });
       toast.success("Profile saved!");
     } catch {
@@ -107,23 +105,6 @@ export default function ProfilePage() {
                   required
                   className="bg-background"
                   data-ocid="profile.name.input"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="rjzLink"
-                  className="font-display text-xs font-bold uppercase tracking-widest text-muted-foreground"
-                >
-                  <LinkIcon className="mr-1 inline h-3 w-3" /> RJZ Profile Link
-                </Label>
-                <Input
-                  id="rjzLink"
-                  value={rjzLink}
-                  onChange={(e) => setRjzLink(e.target.value)}
-                  placeholder="https://rocketjump.zone/players/..."
-                  type="url"
-                  className="bg-background"
-                  data-ocid="profile.rjz_link.input"
                 />
               </div>
               <Button

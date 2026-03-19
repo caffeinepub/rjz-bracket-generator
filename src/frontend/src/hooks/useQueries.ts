@@ -1,6 +1,11 @@
 import type { Principal } from "@icp-sdk/core/principal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Match, Tournament, UserProfile } from "../backend.d";
+import type {
+  Match,
+  PublicPlayer,
+  Tournament,
+  UserProfile,
+} from "../backend.d";
 import type { UserRole } from "../backend.d";
 import { useActor } from "./useActor";
 
@@ -35,6 +40,18 @@ export function useBracketMatches(tournamentId: bigint | null) {
     queryFn: async () => {
       if (!actor || tournamentId === null) return [];
       return actor.getBracketMatches(tournamentId);
+    },
+    enabled: !!actor && !isFetching && tournamentId !== null,
+  });
+}
+
+export function useTournamentPlayers(tournamentId: bigint | null) {
+  const { actor, isFetching } = useActor();
+  return useQuery<PublicPlayer[]>({
+    queryKey: ["players", tournamentId?.toString()],
+    queryFn: async () => {
+      if (!actor || tournamentId === null) return [];
+      return actor.getTournamentPlayers(tournamentId);
     },
     enabled: !!actor && !isFetching && tournamentId !== null,
   });
@@ -110,6 +127,7 @@ export function useJoinTournament() {
     },
     onSuccess: (_d, id) => {
       qc.invalidateQueries({ queryKey: ["tournament", id.toString()] });
+      qc.invalidateQueries({ queryKey: ["players", id.toString()] });
       qc.invalidateQueries({ queryKey: ["tournaments"] });
     },
   });
@@ -126,6 +144,9 @@ export function useAddGuestPlayer() {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({
         queryKey: ["tournament", vars.tournamentId.toString()],
+      });
+      qc.invalidateQueries({
+        queryKey: ["players", vars.tournamentId.toString()],
       });
     },
   });
@@ -182,5 +203,40 @@ export function useAssignRole() {
       return actor.assignCallerUserRole(data.user, data.role);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["isAdmin"] }),
+  });
+}
+
+export function useKickPlayer() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { tournamentId: bigint; playerName: string }) => {
+      if (!actor) throw new Error("Not authenticated");
+      return actor.kickPlayer(data.tournamentId, data.playerName);
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({
+        queryKey: ["players", vars.tournamentId.toString()],
+      });
+    },
+  });
+}
+
+export function useReorderPlayers() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      tournamentId: bigint;
+      orderedNames: string[];
+    }) => {
+      if (!actor) throw new Error("Not authenticated");
+      return actor.reorderPlayers(data.tournamentId, data.orderedNames);
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({
+        queryKey: ["players", vars.tournamentId.toString()],
+      });
+    },
   });
 }

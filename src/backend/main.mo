@@ -37,6 +37,11 @@ actor {
     playerType : PlayerType;
   };
 
+  public type PublicPlayer = {
+    name : Text;
+    isGuest : Bool;
+  };
+
   public type Match = {
     round : Nat;
     slot : Nat;
@@ -62,11 +67,52 @@ actor {
     };
   };
 
+  // ── Stable state for persistence across upgrades ─────────────────────────
+
+  var nextTournamentId : Nat = 1;
+  var stableUserProfiles : [(Principal, UserProfile)] = [];
+  var stableTournaments : [(Nat, Tournament)] = [];
+  var stablePlayers : [(Nat, [Player])] = [];
+  var stableMatches : [(Nat, [Match])] = [];
+  var stableAdminAssigned : Bool = false;
+  var stableUserRoles : [(Principal, AccessControl.UserRole)] = [];
+
+  // ── Operational (in-memory) state ─────────────────────────────────────────
+
   let userProfiles = Map.empty<Principal, UserProfile>();
   let tournaments = Map.empty<Nat, Tournament>();
   let players = Map.empty<Nat, [Player]>();
   let tournamentMatches = Map.empty<Nat, [Match]>();
-  var nextTournamentId = 1;
+
+  // ── Upgrade hooks ─────────────────────────────────────────────────────────
+
+  system func preupgrade() {
+    stableUserProfiles := userProfiles.entries().toArray();
+    stableTournaments := tournaments.entries().toArray();
+    stablePlayers := players.entries().toArray();
+    stableMatches := tournamentMatches.entries().toArray();
+    stableAdminAssigned := accessControlState.adminAssigned;
+    stableUserRoles := accessControlState.userRoles.entries().toArray();
+  };
+
+  system func postupgrade() {
+    for ((k, v) in stableUserProfiles.vals()) {
+      userProfiles.add(k, v);
+    };
+    for ((k, v) in stableTournaments.vals()) {
+      tournaments.add(k, v);
+    };
+    for ((k, v) in stablePlayers.vals()) {
+      players.add(k, v);
+    };
+    for ((k, v) in stableMatches.vals()) {
+      tournamentMatches.add(k, v);
+    };
+    accessControlState.adminAssigned := stableAdminAssigned;
+    for ((k, v) in stableUserRoles.vals()) {
+      accessControlState.userRoles.add(k, v);
+    };
+  };
 
   // ── Bracket helpers ──────────────────────────────────────────────────────
 
@@ -84,9 +130,6 @@ actor {
     result
   };
 
-  // Build all match stubs for a full single-elimination bracket.
-  // Round 1 has actual player names; later rounds start with empty strings.
-  // If has3rdPlaceMatch, an extra match at round (numRounds+1) slot 1 is appended.
   func generateInitialMatches(ps : [Player], has3rdPlaceMatch : Bool) : [Match] {
     let n = ps.size();
     if (n < 2) Runtime.trap("Need at least 2 players to start");
@@ -95,7 +138,6 @@ actor {
     let bracketSize = pow2(numRounds);
     let numR1Matches = bracketSize / 2;
 
-    // Round 1
     var allMatches = Array.tabulate<Match>(
       numR1Matches,
       func(i) {
@@ -116,7 +158,6 @@ actor {
       },
     );
 
-    // Rounds 2 .. numRounds
     var r = 2;
     while (r <= numRounds) {
       let currentRound = r;
@@ -140,7 +181,6 @@ actor {
       r += 1;
     };
 
-    // Optional 3rd-place match lives at round numRounds+1
     if (has3rdPlaceMatch and numRounds >= 2) {
       allMatches := allMatches.concat([
         {
@@ -159,11 +199,10 @@ actor {
     allMatches
   };
 
-  // Advance winner name into the correct slot of the next round.
   func advanceWinner(matches : [Match], fromRound : Nat, fromSlot : Nat, winnerName : Text) : [Match] {
     let nextRound = fromRound + 1;
-    let nextSlot = (fromSlot + 1) / 2; // ceil(slot/2) in 1-indexed
-    let goesTop = fromSlot % 2 == 1;   // odd slot feeds player1, even feeds player2
+    let nextSlot = (fromSlot + 1) / 2;
+    let goesTop = fromSlot % 2 == 1;
     matches.map(func(m) {
       if (m.round == nextRound and m.slot == nextSlot) {
         if (goesTop) { { m with player1Name = winnerName } }
@@ -172,8 +211,6 @@ actor {
     });
   };
 
-  // Place a loser into the 3rd-place match (always round maxRound+1, slot 1).
-  // semiSlot 1/3/... → player1, semiSlot 2/4/... → player2 of 3rd-place.
   func place3rdPlacePlayer(
     matches : [Match],
     thirdPlaceRound : Nat,
@@ -189,14 +226,12 @@ actor {
     });
   };
 
-  // Auto-complete BYE matches and cascade winners upward.
   func processByes(matches : [Match], has3rdPlaceMatch : Bool) : [Match] {
-    // Compute finalRound for guard (don't advance past the final into 3rd place)
     var maxRound : Nat = 0;
     for (m in matches.vals()) {
       if (m.round > maxRound) maxRound := m.round;
     };
-    let finalRound = if (has3rdPlaceMatch and maxRound > 0) maxRound - 1 else maxRound;
+    let finalRound : Nat = if (has3rdPlaceMatch and maxRound > 0) Nat.sub(maxRound, 1) else maxRound;
 
     var result = matches;
     var changed = true;
@@ -208,7 +243,6 @@ actor {
         if (isBye) {
           changed := true;
           let winnerName = if (m.player2Name == "BYE") m.player1Name else m.player2Name;
-          // Mark completed
           result := result.map(func(x) {
             if (x.round == m.round and x.slot == m.slot) {
               { x with
@@ -218,7 +252,6 @@ actor {
               }
             } else { x };
           });
-          // Advance winner if not already in the final
           if (m.round < finalRound) {
             result := advanceWinner(result, m.round, m.slot, winnerName);
           };
@@ -296,6 +329,32 @@ actor {
     players.add(tournamentId, currentPlayers.concat([newPlayer]));
   };
 
+  public shared ({ caller }) func kickPlayer(tournamentId : Nat, playerName : Text) : async () {
+    if (not (AccessControl.isAdmin(accessControlState, caller))) {
+      Runtime.trap("Unauthorized: Only admins can kick players");
+    };
+    let currentPlayers = switch (players.get(tournamentId)) {
+      case (null) { [] };
+      case (?p) { p };
+    };
+    let filtered = currentPlayers.filter(func(p : Player) : Bool { p.name != playerName });
+    players.add(tournamentId, filtered);
+  };
+
+  public shared ({ caller }) func reorderPlayers(tournamentId : Nat, orderedNames : [Text]) : async () {
+    if (not (AccessControl.isAdmin(accessControlState, caller))) {
+      Runtime.trap("Unauthorized: Only admins can reorder players");
+    };
+    let currentPlayers = switch (players.get(tournamentId)) {
+      case (null) { [] };
+      case (?p) { p };
+    };
+    let reordered = orderedNames.filterMap(func(name : Text) : ?Player {
+      currentPlayers.find(func(p : Player) : Bool { p.name == name })
+    });
+    players.add(tournamentId, reordered);
+  };
+
   public shared ({ caller }) func startTournament(tournamentId : Nat) : async () {
     if (not (AccessControl.isAdmin(accessControlState, caller))) {
       Runtime.trap("Unauthorized: Only admins can start tournaments");
@@ -308,8 +367,7 @@ actor {
       case (null) { Runtime.trap("Players not found") };
       case (?p) { p };
     };
-    let sorted = currentPlayers.sort(func(a, b) { Text.compare(a.name, b.name) });
-    var initialMatches = generateInitialMatches(sorted, tournament.has3rdPlaceMatch);
+    var initialMatches = generateInitialMatches(currentPlayers, tournament.has3rdPlaceMatch);
     initialMatches := processByes(initialMatches, tournament.has3rdPlaceMatch);
     tournamentMatches.add(tournamentId, initialMatches);
     let updated = { tournament with status = #active };
@@ -368,7 +426,6 @@ actor {
       case (?m) { m };
     };
 
-    // Find and update the target match
     var updatedMatch : ?Match = null;
     matches := matches.map(func(m) {
       if (m.round == round and m.slot == slot) {
@@ -383,25 +440,20 @@ actor {
       case (?m) { m };
     };
 
-    // Determine winner and loser names from scores
     let winnerName = if (score1 >= score2) target.player1Name else target.player2Name;
     let loserName  = if (score1 >= score2) target.player2Name else target.player1Name;
 
-    // Compute bracket bounds
     var maxRound : Nat = 0;
     for (m in matches.vals()) {
       if (m.round > maxRound) maxRound := m.round;
     };
-    // If 3rd place enabled, 3rd-place match is at maxRound; final is maxRound-1
-    let finalRound = if (tournament.has3rdPlaceMatch and maxRound > 0) maxRound - 1 else maxRound;
-    let semiRound  = if (finalRound > 1) finalRound - 1 else 0;
+    let finalRound : Nat = if (tournament.has3rdPlaceMatch and maxRound > 0) Nat.sub(maxRound, 1) else maxRound;
+    let semiRound : Nat  = if (finalRound > 1) Nat.sub(finalRound, 1) else 0;
 
-    // Advance winner into next round (only for regular-bracket rounds, not the final or 3rd-place)
     if (round < finalRound) {
       matches := advanceWinner(matches, round, slot, winnerName);
     };
 
-    // Populate 3rd-place match from semi losers
     if (tournament.has3rdPlaceMatch and semiRound > 0 and round == semiRound) {
       matches := place3rdPlacePlayer(matches, maxRound, slot, loserName);
     };
@@ -423,6 +475,17 @@ actor {
     switch (tournamentMatches.get(tournamentId)) {
       case (null) { [] };
       case (?matches) { matches };
+    };
+  };
+
+  public query func getTournamentPlayers(tournamentId : Nat) : async [PublicPlayer] {
+    switch (players.get(tournamentId)) {
+      case (null) { [] };
+      case (?ps) {
+        ps.map(func(p) : PublicPlayer {
+          { name = p.name; isGuest = p.playerType == #guestPlayer };
+        });
+      };
     };
   };
 };

@@ -3,9 +3,10 @@ import { Input } from "@/components/ui/input";
 import { CheckCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import type { Match } from "../backend.d";
+import type { Match, PublicPlayer } from "../backend.d";
 import { MatchStatus } from "../backend.d";
 import { useReportMatch } from "../hooks/useQueries";
+import PreviewBracket from "./PreviewBracket";
 
 interface BracketViewProps {
   matches: Match[];
@@ -13,6 +14,8 @@ interface BracketViewProps {
   currentPlayerName?: string;
   isAdmin?: boolean;
   readOnly?: boolean;
+  players?: PublicPlayer[];
+  isPending?: boolean;
 }
 
 interface MatchNodeProps {
@@ -153,6 +156,8 @@ export default function BracketView({
   currentPlayerName,
   isAdmin,
   readOnly,
+  players = [],
+  isPending = false,
 }: BracketViewProps) {
   const rounds = useMemo(() => {
     if (!matches.length) return [];
@@ -171,6 +176,16 @@ export default function BracketView({
   }, [matches]);
 
   if (!matches.length) {
+    if (isPending) {
+      return (
+        <PreviewBracket
+          players={players}
+          tournamentId={tournamentId}
+          isAdmin={isAdmin}
+        />
+      );
+    }
+
     return (
       <div
         className="flex h-48 items-center justify-center"

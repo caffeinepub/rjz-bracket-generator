@@ -89,6 +89,10 @@ export class ExternalBlob {
         return this;
     }
 }
+export interface PublicPlayer {
+    isGuest: boolean;
+    name: string;
+}
 export interface Tournament {
     id: bigint;
     status: TournamentStatus;
@@ -134,9 +138,12 @@ export interface backendInterface {
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getTournament(tournamentId: bigint): Promise<Tournament | null>;
+    getTournamentPlayers(tournamentId: bigint): Promise<Array<PublicPlayer>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     joinTournament(tournamentId: bigint): Promise<void>;
+    kickPlayer(tournamentId: bigint, playerName: string): Promise<void>;
+    reorderPlayers(tournamentId: bigint, orderedNames: Array<string>): Promise<void>;
     reportMatch(tournamentId: bigint, round: bigint, slot: bigint, score1: bigint, score2: bigint, winnerId: Principal | null): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     startTournament(tournamentId: bigint): Promise<void>;
@@ -270,6 +277,20 @@ export class Backend implements backendInterface {
             return from_candid_opt_n17(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getTournamentPlayers(arg0: bigint): Promise<Array<PublicPlayer>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getTournamentPlayers(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getTournamentPlayers(arg0);
+            return result;
+        }
+    }
     async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
         if (this.processError) {
             try {
@@ -309,6 +330,34 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.joinTournament(arg0);
+            return result;
+        }
+    }
+    async kickPlayer(arg0: bigint, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.kickPlayer(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.kickPlayer(arg0, arg1);
+            return result;
+        }
+    }
+    async reorderPlayers(arg0: bigint, arg1: Array<string>): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.reorderPlayers(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.reorderPlayers(arg0, arg1);
             return result;
         }
     }

@@ -43,6 +43,10 @@ export const UserProfile = IDL.Record({
   'name' : IDL.Text,
   'rjzProfileLink' : IDL.Text,
 });
+export const PublicPlayer = IDL.Record({
+  'isGuest' : IDL.Bool,
+  'name' : IDL.Text,
+});
 
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
@@ -54,6 +58,11 @@ export const idlService = IDL.Service({
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getTournament' : IDL.Func([IDL.Nat], [IDL.Opt(Tournament)], ['query']),
+  'getTournamentPlayers' : IDL.Func(
+      [IDL.Nat],
+      [IDL.Vec(PublicPlayer)],
+      ['query'],
+    ),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
@@ -61,6 +70,8 @@ export const idlService = IDL.Service({
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'joinTournament' : IDL.Func([IDL.Nat], [], []),
+  'kickPlayer' : IDL.Func([IDL.Nat, IDL.Text], [], []),
+  'reorderPlayers' : IDL.Func([IDL.Nat, IDL.Vec(IDL.Text)], [], []),
   'reportMatch' : IDL.Func(
       [IDL.Nat, IDL.Nat, IDL.Nat, IDL.Int, IDL.Int, IDL.Opt(IDL.Principal)],
       [],
@@ -108,6 +119,7 @@ export const idlFactory = ({ IDL }) => {
     'name' : IDL.Text,
     'rjzProfileLink' : IDL.Text,
   });
+  const PublicPlayer = IDL.Record({ 'isGuest' : IDL.Bool, 'name' : IDL.Text });
   
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
@@ -123,6 +135,11 @@ export const idlFactory = ({ IDL }) => {
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getTournament' : IDL.Func([IDL.Nat], [IDL.Opt(Tournament)], ['query']),
+    'getTournamentPlayers' : IDL.Func(
+        [IDL.Nat],
+        [IDL.Vec(PublicPlayer)],
+        ['query'],
+      ),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
@@ -130,6 +147,8 @@ export const idlFactory = ({ IDL }) => {
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'joinTournament' : IDL.Func([IDL.Nat], [], []),
+    'kickPlayer' : IDL.Func([IDL.Nat, IDL.Text], [], []),
+    'reorderPlayers' : IDL.Func([IDL.Nat, IDL.Vec(IDL.Text)], [], []),
     'reportMatch' : IDL.Func(
         [IDL.Nat, IDL.Nat, IDL.Nat, IDL.Int, IDL.Int, IDL.Opt(IDL.Principal)],
         [],

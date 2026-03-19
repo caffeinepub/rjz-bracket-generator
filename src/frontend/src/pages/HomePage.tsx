@@ -16,7 +16,7 @@ import { useAllTournaments } from "../hooks/useQueries";
 const SAMPLE_TOURNAMENTS = [
   {
     id: BigInt(1),
-    name: "RJZ Open Championship",
+    name: "Open Championship",
     description:
       "The premier open tournament for all skill levels. Compete for glory and prizes.",
     status: TournamentStatus.active,
@@ -42,7 +42,7 @@ const FEATURES = [
   {
     icon: Users,
     title: "Player Registration",
-    desc: "Players sign up with their name and RJZ profile. Admins can also add guest players manually.",
+    desc: "Players sign up with just their name. Admins can also add guest players manually.",
   },
   {
     icon: Zap,
@@ -100,9 +100,8 @@ export default function HomePage() {
                 GENERATOR
               </h1>
               <p className="mb-8 max-w-md text-base text-muted-foreground">
-                Professional tournament bracket management for the RocketJump
-                Zone community. Create, manage, and compete in
-                single-elimination tournaments.
+                Create, manage, and compete in single-elimination tournaments.
+                Open to everyone.
               </p>
               <div className="flex gap-3">
                 <Button
