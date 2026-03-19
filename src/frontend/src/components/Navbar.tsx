@@ -6,16 +6,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Menu, Trophy, User, X } from "lucide-react";
+import { Heart, Menu, Trophy, User, X } from "lucide-react";
 import { useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useIsAdmin } from "../hooks/useQueries";
+import DonationModal from "./DonationModal";
 
 export default function Navbar() {
   const { login, clear, identity, isLoggingIn, loginStatus } =
     useInternetIdentity();
   const { data: isAdmin } = useIsAdmin();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [donationOpen, setDonationOpen] = useState(false);
   const navigate = useNavigate();
 
   const isLoggedIn = loginStatus === "success" && !!identity;
@@ -57,6 +59,16 @@ export default function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setDonationOpen(true)}
+            className="gap-1.5 border-primary/50 font-display text-xs font-semibold uppercase tracking-wide text-primary hover:bg-primary/10 hover:text-primary"
+            data-ocid="nav.support.button"
+          >
+            <Heart className="h-3.5 w-3.5" />
+            Support Us
+          </Button>
           {isLoggedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -152,6 +164,18 @@ export default function Navbar() {
                 Admin
               </Link>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                setDonationOpen(true);
+                setMobileOpen(false);
+              }}
+              className="flex items-center gap-2 rounded px-3 py-2 text-left font-display font-semibold uppercase tracking-wider text-primary hover:bg-muted"
+              data-ocid="nav.mobile.support.button"
+            >
+              <Heart className="h-4 w-4" />
+              Support Us
+            </button>
             {isLoggedIn ? (
               <>
                 <Link
@@ -189,6 +213,11 @@ export default function Navbar() {
           </nav>
         </div>
       )}
+
+      <DonationModal
+        open={donationOpen}
+        onClose={() => setDonationOpen(false)}
+      />
     </header>
   );
 }

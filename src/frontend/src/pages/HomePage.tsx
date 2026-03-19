@@ -9,34 +9,8 @@ import {
   Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { TournamentStatus } from "../backend.d";
 import TournamentCard from "../components/TournamentCard";
 import { useAllTournaments } from "../hooks/useQueries";
-
-const SAMPLE_TOURNAMENTS = [
-  {
-    id: BigInt(1),
-    name: "Open Championship",
-    description:
-      "The premier open tournament for all skill levels. Compete for glory and prizes.",
-    status: TournamentStatus.active,
-    has3rdPlaceMatch: true,
-  },
-  {
-    id: BigInt(2),
-    name: "Rocket League Summer Cup",
-    description: "Fast-paced 1v1 showdown. Only the best advance.",
-    status: TournamentStatus.pending,
-    has3rdPlaceMatch: false,
-  },
-  {
-    id: BigInt(3),
-    name: "Winter Invitational 2025",
-    description: "Invitation-only tournament for top-ranked players.",
-    status: TournamentStatus.completed,
-    has3rdPlaceMatch: true,
-  },
-];
 
 const FEATURES = [
   {
@@ -63,9 +37,7 @@ const FEATURES = [
 
 export default function HomePage() {
   const { data: tournaments } = useAllTournaments();
-  const liveTournaments = (
-    tournaments && tournaments.length > 0 ? tournaments : SAMPLE_TOURNAMENTS
-  ).slice(0, 6);
+  const liveTournaments = (tournaments ?? []).slice(0, 6);
 
   return (
     <div>
