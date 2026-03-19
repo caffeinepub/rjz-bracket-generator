@@ -1,0 +1,60 @@
+import type { Principal } from "@icp-sdk/core/principal";
+export interface Some<T> {
+    __kind__: "Some";
+    value: T;
+}
+export interface None {
+    __kind__: "None";
+}
+export type Option<T> = Some<T> | None;
+export interface Tournament {
+    id: bigint;
+    status: TournamentStatus;
+    has3rdPlaceMatch: boolean;
+    name: string;
+    description: string;
+}
+export interface Match {
+    status: MatchStatus;
+    winnerId?: Principal;
+    score1: bigint;
+    score2: bigint;
+    slot: bigint;
+    player2Name: string;
+    player1Name: string;
+    round: bigint;
+}
+export interface UserProfile {
+    name: string;
+    rjzProfileLink: string;
+}
+export enum MatchStatus {
+    scheduled = "scheduled",
+    completed = "completed"
+}
+export enum TournamentStatus {
+    active = "active",
+    pending = "pending",
+    completed = "completed"
+}
+export enum UserRole {
+    admin = "admin",
+    user = "user",
+    guest = "guest"
+}
+export interface backendInterface {
+    addGuestPlayer(tournamentId: bigint, name: string): Promise<void>;
+    assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    createTournament(name: string, description: string, has3rdPlaceMatch: boolean): Promise<bigint>;
+    getAllTournaments(): Promise<Array<Tournament>>;
+    getBracketMatches(tournamentId: bigint): Promise<Array<Match>>;
+    getCallerUserProfile(): Promise<UserProfile | null>;
+    getCallerUserRole(): Promise<UserRole>;
+    getTournament(tournamentId: bigint): Promise<Tournament | null>;
+    getUserProfile(user: Principal): Promise<UserProfile | null>;
+    isCallerAdmin(): Promise<boolean>;
+    joinTournament(tournamentId: bigint): Promise<void>;
+    reportMatch(tournamentId: bigint, round: bigint, slot: bigint, score1: bigint, score2: bigint, winnerId: Principal | null): Promise<void>;
+    saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    startTournament(tournamentId: bigint): Promise<void>;
+}
