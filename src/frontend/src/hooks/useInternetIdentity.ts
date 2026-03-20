@@ -69,7 +69,9 @@ function assertProviderPresent(
   context: ProviderValue | undefined,
 ): asserts context is ProviderValue {
   if (!context) {
-    throw new Error("InternetIdentityProvider is not present.");
+    throw new Error(
+      "InternetIdentityProvider is not present. Wrap your component tree with it.",
+    );
   }
 }
 
@@ -92,8 +94,9 @@ export function InternetIdentityProvider({
   const [identity, setIdentity] = useState<Identity | undefined>(undefined);
   const [loginStatus, setStatus] = useState<Status>("initializing");
   const [loginError, setError] = useState<Error | undefined>(undefined);
-  const initDone = useRef(false);
+  // Use a ref to hold createOptions so the init effect truly runs only once
   const createOptionsRef = useRef(createOptions);
+  const initDone = useRef(false);
 
   const setErrorMessage = useCallback((message: string) => {
     setStatus("loginError");
@@ -119,7 +122,7 @@ export function InternetIdentityProvider({
 
   const login = useCallback(() => {
     if (!authClient) {
-      setErrorMessage("AuthClient not initialized");
+      setErrorMessage("AuthClient is not initialized yet.");
       return;
     }
     const currentIdentity = authClient.getIdentity();
@@ -151,9 +154,9 @@ export function InternetIdentityProvider({
       .then(() => {
         setIdentity(undefined);
         setAuthClient(undefined);
+        initDone.current = false;
         setStatus("idle");
         setError(undefined);
-        initDone.current = false;
       })
       .catch((unknownError: unknown) => {
         setStatus("loginError");
@@ -165,22 +168,27 @@ export function InternetIdentityProvider({
       });
   }, [authClient, setErrorMessage]);
 
-  // Initialize once on mount
+  // Run once on mount to restore saved session.
+  // createOptionsRef holds the initial options so this truly runs only on mount.
   useEffect(() => {
     if (initDone.current) return;
     initDone.current = true;
+
     let cancelled = false;
+    const opts = createOptionsRef.current;
+
     void (async () => {
       try {
         setStatus("initializing");
-        const client = await createAuthClient(createOptionsRef.current);
+        const client = await createAuthClient(opts);
         if (cancelled) return;
         setAuthClient(client);
+
         const isAuthenticated = await client.isAuthenticated();
         if (cancelled) return;
+
         if (isAuthenticated) {
-          // Restore saved session: mark as success so the rest of the app
-          // treats the user as logged in without requiring a new login flow.
+          // CRITICAL: set "success" so isLoggedIn is true after page reload
           setIdentity(client.getIdentity());
           setStatus("success");
         } else {
@@ -197,11 +205,10 @@ export function InternetIdentityProvider({
         }
       }
     })();
+
     return () => {
       cancelled = true;
     };
-    // Run only once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value = useMemo<ProviderValue>(
