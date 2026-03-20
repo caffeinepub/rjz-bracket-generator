@@ -264,9 +264,8 @@ actor {
   // ── Profile management ───────────────────────────────────────────────────
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access profiles");
-    };
+    if (caller.isAnonymous()) { return null };
+    if (not AccessControl.isRegistered(accessControlState, caller)) { return null };
     userProfiles.get(caller);
   };
 
@@ -278,9 +277,11 @@ actor {
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Must be logged in to save a profile");
     };
+    // Auto-register as user if not already registered
+    AccessControl.ensureRegistered(accessControlState, caller);
     userProfiles.add(caller, profile);
   };
 
