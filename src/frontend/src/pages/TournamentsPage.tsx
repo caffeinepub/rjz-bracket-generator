@@ -6,54 +6,14 @@ import { type Tournament, TournamentStatus } from "../backend.d";
 import TournamentCard from "../components/TournamentCard";
 import { useAllTournaments } from "../hooks/useQueries";
 
-const SAMPLE: Tournament[] = [
-  {
-    id: BigInt(1),
-    name: "RJZ Open Championship",
-    description:
-      "The premier open tournament for all skill levels. Compete for glory and prizes in a 16-player single elimination bracket.",
-    status: TournamentStatus.active,
-    has3rdPlaceMatch: true,
-  },
-  {
-    id: BigInt(2),
-    name: "Rocket League Summer Cup",
-    description: "Fast-paced 1v1 showdown. Only the best advance.",
-    status: TournamentStatus.pending,
-    has3rdPlaceMatch: false,
-  },
-  {
-    id: BigInt(3),
-    name: "Winter Invitational 2025",
-    description: "Invitation-only tournament for top-ranked players.",
-    status: TournamentStatus.completed,
-    has3rdPlaceMatch: true,
-  },
-  {
-    id: BigInt(4),
-    name: "Community Clash #4",
-    description:
-      "Monthly community tournament open to everyone. Great practice for newer players.",
-    status: TournamentStatus.pending,
-    has3rdPlaceMatch: false,
-  },
-  {
-    id: BigInt(5),
-    name: "Pro Series Qualifier",
-    description:
-      "Qualify for the RJZ Pro Series. Top 4 advance to the main event.",
-    status: TournamentStatus.completed,
-    has3rdPlaceMatch: true,
-  },
-];
-
 export default function TournamentsPage() {
   const [filter, setFilter] = useState<"all" | TournamentStatus>("all");
-  const { data: tournaments, isLoading } = useAllTournaments();
+  const { data: tournaments = [], isLoading } = useAllTournaments();
 
-  const source = tournaments && tournaments.length > 0 ? tournaments : SAMPLE;
   const filtered =
-    filter === "all" ? source : source.filter((t) => t.status === filter);
+    filter === "all"
+      ? tournaments
+      : tournaments.filter((t) => t.status === filter);
 
   return (
     <div className="container mx-auto px-4 py-10">

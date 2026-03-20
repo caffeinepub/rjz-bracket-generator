@@ -49,6 +49,7 @@ export enum UserRole {
 export interface backendInterface {
     addGuestPlayer(tournamentId: bigint, name: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    claimAdminByToken(token: string): Promise<boolean>;
     createTournament(name: string, description: string, has3rdPlaceMatch: boolean): Promise<bigint>;
     getAllTournaments(): Promise<Array<Tournament>>;
     getBracketMatches(tournamentId: bigint): Promise<Array<Match>>;

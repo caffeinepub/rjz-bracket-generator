@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { TournamentStatus } from "../backend.d";
 import DonationModal from "../components/DonationModal";
 import TournamentCard from "../components/TournamentCard";
+import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useAllTournaments,
@@ -29,11 +30,15 @@ export default function AdminPage() {
     useAllTournaments();
   const createTournament = useCreateTournament();
   const startTournament = useStartTournament();
+  const { actor } = useActor();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [has3rdPlace, setHas3rdPlace] = useState(false);
   const [showDonation, setShowDonation] = useState(false);
+
+  const [adminToken, setAdminToken] = useState("");
+  const [claimingAdmin, setClaimingAdmin] = useState(false);
 
   if (!isLoggedIn) {
     return (
@@ -69,10 +74,29 @@ export default function AdminPage() {
     );
   }
 
+  const handleClaimAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!actor || !adminToken.trim()) return;
+    setClaimingAdmin(true);
+    try {
+      const result = await (actor as any).claimAdminByToken(adminToken.trim());
+      if (result) {
+        toast.success("Admin access granted! Reloading...");
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        toast.error("Invalid token");
+      }
+    } catch {
+      toast.error("Invalid token");
+    } finally {
+      setClaimingAdmin(false);
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div
-        className="container mx-auto flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 py-20"
+        className="container mx-auto flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 py-20"
         data-ocid="admin.error_state"
       >
         <ShieldAlert className="h-16 w-16 text-destructive" />
@@ -80,8 +104,44 @@ export default function AdminPage() {
           Access Denied
         </h2>
         <p className="text-muted-foreground">
-          You do not have admin privileges.
+          Enter your admin token below to gain access.
         </p>
+        <form
+          onSubmit={handleClaimAdmin}
+          className="flex w-full max-w-sm flex-col gap-3"
+        >
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="adminToken"
+              className="font-display text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            >
+              Admin Token
+            </Label>
+            <Input
+              id="adminToken"
+              type="text"
+              value={adminToken}
+              onChange={(e) => setAdminToken(e.target.value)}
+              placeholder="Enter admin token..."
+              className="bg-background"
+              data-ocid="admin.token.input"
+            />
+          </div>
+          <Button
+            type="submit"
+            disabled={claimingAdmin || !adminToken.trim()}
+            className="bg-primary font-display font-bold uppercase tracking-wide text-white"
+            data-ocid="admin.claim_admin.submit_button"
+          >
+            {claimingAdmin ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying...
+              </>
+            ) : (
+              "Claim Admin Access"
+            )}
+          </Button>
+        </form>
       </div>
     );
   }

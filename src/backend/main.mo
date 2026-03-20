@@ -14,6 +14,9 @@ actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
+  // ── Hardcoded admin token ─────────────────────────────────────────────────
+  let ADMIN_TOKEN : Text = "rjz-a7f3k2m9p4x1q8w5";
+
   type TournamentStatus = { #pending; #active; #completed };
   type MatchStatus = { #scheduled; #completed };
   type PlayerType = { #registeredPlayer; #guestPlayer };
@@ -112,6 +115,16 @@ actor {
     for ((k, v) in stableUserRoles.vals()) {
       accessControlState.userRoles.add(k, v);
     };
+  };
+
+  // ── Admin token claim ────────────────────────────────────────────────────
+
+  public shared ({ caller }) func claimAdminByToken(token : Text) : async Bool {
+    if (caller.isAnonymous()) { return false };
+    if (token != ADMIN_TOKEN) { return false };
+    accessControlState.userRoles.add(caller, #admin);
+    accessControlState.adminAssigned := true;
+    true
   };
 
   // ── Bracket helpers ──────────────────────────────────────────────────────
@@ -265,7 +278,7 @@ actor {
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     if (caller.isAnonymous()) { return null };
-    if (not AccessControl.isRegistered(accessControlState, caller)) { return null };
+    if (accessControlState.userRoles.get(caller) == null) { return null };
     userProfiles.get(caller);
   };
 
@@ -281,7 +294,7 @@ actor {
       Runtime.trap("Unauthorized: Must be logged in to save a profile");
     };
     // Auto-register as user if not already registered
-    AccessControl.ensureRegistered(accessControlState, caller);
+    if (accessControlState.userRoles.get(caller) == null) { accessControlState.userRoles.add(caller, #user) };
     userProfiles.add(caller, profile);
   };
 
