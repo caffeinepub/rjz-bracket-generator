@@ -59,6 +59,7 @@ export interface backendInterface {
     getTournamentPlayers(tournamentId: bigint): Promise<Array<PublicPlayer>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    isCallerTournamentCreator(tournamentId: bigint): Promise<boolean>;
     joinTournament(tournamentId: bigint): Promise<void>;
     kickPlayer(tournamentId: bigint, playerName: string): Promise<void>;
     reorderPlayers(tournamentId: bigint, orderedNames: Array<string>): Promise<void>;

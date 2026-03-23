@@ -50,6 +50,7 @@ export interface _SERVICE {
   'getTournamentPlayers' : ActorMethod<[bigint], Array<PublicPlayer>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'isCallerTournamentCreator' : ActorMethod<[bigint], boolean>,
   'joinTournament' : ActorMethod<[bigint], undefined>,
   'kickPlayer' : ActorMethod<[bigint, string], undefined>,
   'reorderPlayers' : ActorMethod<[bigint, Array<string>], undefined>,

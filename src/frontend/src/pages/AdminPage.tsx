@@ -13,7 +13,6 @@ import { toast } from "sonner";
 import { TournamentStatus } from "../backend.d";
 import DonationModal from "../components/DonationModal";
 import TournamentCard from "../components/TournamentCard";
-import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useAllTournaments,
@@ -24,21 +23,26 @@ import {
 
 export default function AdminPage() {
   const { identity, login, loginStatus } = useInternetIdentity();
-  const isLoggedIn = loginStatus === "success" && !!identity;
+  const isLoggedIn = !!identity && loginStatus !== "initializing";
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
   const { data: tournaments = [], isLoading: tournamentsLoading } =
     useAllTournaments();
   const createTournament = useCreateTournament();
   const startTournament = useStartTournament();
-  const { actor } = useActor();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [has3rdPlace, setHas3rdPlace] = useState(false);
   const [showDonation, setShowDonation] = useState(false);
 
-  const [adminToken, setAdminToken] = useState("");
-  const [claimingAdmin, setClaimingAdmin] = useState(false);
+  if (loginStatus === "initializing") {
+    return (
+      <div className="container mx-auto px-4 py-10">
+        <Skeleton className="h-10 w-48 mb-6" />
+        <Skeleton className="h-64 w-full rounded-lg" />
+      </div>
+    );
+  }
 
   if (!isLoggedIn) {
     return (
@@ -48,7 +52,8 @@ export default function AdminPage() {
           Admin Access Required
         </h2>
         <p className="text-center text-muted-foreground">
-          Please log in with an admin account to access this page.
+          Log in to access the admin panel. The first account to log in gets
+          admin privileges automatically.
         </p>
         <Button
           size="lg"
@@ -74,25 +79,6 @@ export default function AdminPage() {
     );
   }
 
-  const handleClaimAdmin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!actor || !adminToken.trim()) return;
-    setClaimingAdmin(true);
-    try {
-      const result = await (actor as any).claimAdminByToken(adminToken.trim());
-      if (result) {
-        toast.success("Admin access granted! Reloading...");
-        setTimeout(() => window.location.reload(), 1000);
-      } else {
-        toast.error("Invalid token");
-      }
-    } catch {
-      toast.error("Invalid token");
-    } finally {
-      setClaimingAdmin(false);
-    }
-  };
-
   if (!isAdmin) {
     return (
       <div
@@ -104,44 +90,8 @@ export default function AdminPage() {
           Access Denied
         </h2>
         <p className="text-muted-foreground">
-          Enter your admin token below to gain access.
+          Your account does not have admin privileges.
         </p>
-        <form
-          onSubmit={handleClaimAdmin}
-          className="flex w-full max-w-sm flex-col gap-3"
-        >
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="adminToken"
-              className="font-display text-xs font-bold uppercase tracking-widest text-muted-foreground"
-            >
-              Admin Token
-            </Label>
-            <Input
-              id="adminToken"
-              type="text"
-              value={adminToken}
-              onChange={(e) => setAdminToken(e.target.value)}
-              placeholder="Enter admin token..."
-              className="bg-background"
-              data-ocid="admin.token.input"
-            />
-          </div>
-          <Button
-            type="submit"
-            disabled={claimingAdmin || !adminToken.trim()}
-            className="bg-primary font-display font-bold uppercase tracking-wide text-white"
-            data-ocid="admin.claim_admin.submit_button"
-          >
-            {claimingAdmin ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying...
-              </>
-            ) : (
-              "Claim Admin Access"
-            )}
-          </Button>
-        </form>
       </div>
     );
   }
@@ -187,7 +137,6 @@ export default function AdminPage() {
         Admin Dashboard
       </h1>
 
-      {/* Create Tournament */}
       <Card className="mb-8 border-border bg-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-display text-lg uppercase tracking-wide">
@@ -266,13 +215,11 @@ export default function AdminPage() {
 
       <Separator className="mb-8" />
 
-      {/* All Tournaments */}
       <div>
         <h2 className="mb-4 font-display text-xl font-bold uppercase tracking-wide text-foreground">
           All Tournaments
         </h2>
 
-        {/* Quick-start pending ones */}
         {pendingTournaments.length > 0 && (
           <div className="mb-4 rounded-lg border border-esports-green/30 bg-esports-green/5 p-4">
             <h3 className="mb-3 font-display text-xs font-bold uppercase tracking-widest text-esports-green">

@@ -9,7 +9,7 @@ import { useKickPlayer, useReorderPlayers } from "../hooks/useQueries";
 interface PreviewBracketProps {
   players: PublicPlayer[];
   tournamentId: bigint;
-  isAdmin?: boolean;
+  isAdmin?: boolean; // true for both admins and tournament creators
 }
 
 interface PreviewMatch {
@@ -102,7 +102,6 @@ export default function PreviewBracket({
   const kickPlayer = useKickPlayer();
   const reorderPlayers = useReorderPlayers();
 
-  // Sync when players prop changes (from backend refresh)
   const prevPlayersRef = useRef<PublicPlayer[]>(players);
   if (prevPlayersRef.current !== players) {
     prevPlayersRef.current = players;
@@ -352,7 +351,7 @@ export default function PreviewBracket({
         <p className="mt-3 text-xs text-muted-foreground/50">
           {isAdmin
             ? "Drag seeds to reorder · Click × to remove · Hit Shuffle to randomize"
-            : "Waiting for admin to start the tournament"}
+            : "Waiting for the tournament to start"}
         </p>
       </div>
     </div>

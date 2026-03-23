@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Heart, Menu, Trophy, User, X } from "lucide-react";
+import { Heart, Menu, Plus, Trophy, User, X } from "lucide-react";
 import { useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useIsAdmin } from "../hooks/useQueries";
@@ -47,6 +47,15 @@ export default function Navbar() {
           >
             Tournaments
           </Link>
+          {isLoggedIn && (
+            <Link
+              to="/create-tournament"
+              className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
+              data-ocid="nav.create_tournament.link"
+            >
+              Create
+            </Link>
+          )}
           {isAdmin && (
             <Link
               to="/admin"
@@ -66,8 +75,7 @@ export default function Navbar() {
             className="gap-1.5 border-primary/50 font-display text-xs font-semibold uppercase tracking-wide text-primary hover:bg-primary/10 hover:text-primary"
             data-ocid="nav.support.button"
           >
-            <Heart className="h-3.5 w-3.5" />
-            Support Us
+            <Heart className="h-3.5 w-3.5" /> Support Us
           </Button>
           {isLoggedIn ? (
             <DropdownMenu>
@@ -84,7 +92,7 @@ export default function Navbar() {
                   </span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>
                   <Link
                     to="/profile"
@@ -92,6 +100,15 @@ export default function Navbar() {
                     data-ocid="nav.profile.link"
                   >
                     My Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    to="/create-tournament"
+                    className="cursor-pointer"
+                    data-ocid="nav.create_tournament.dropdown_link"
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> Create Tournament
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -104,27 +121,16 @@ export default function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => login()}
-                disabled={isLoggingIn}
-                className="border-border font-display font-semibold uppercase tracking-wide"
-                data-ocid="nav.login.button"
-              >
-                {isLoggingIn ? "Logging in..." : "Log In"}
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => login()}
-                disabled={isLoggingIn}
-                className="bg-primary font-display font-semibold uppercase tracking-wide text-white hover:bg-primary/90"
-                data-ocid="nav.signup.button"
-              >
-                Sign Up
-              </Button>
-            </>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => login()}
+              disabled={isLoggingIn}
+              className="border-border font-display font-semibold uppercase tracking-wide"
+              data-ocid="nav.login.button"
+            >
+              {isLoggingIn ? "Logging in..." : "Log In"}
+            </Button>
           )}
         </div>
 
@@ -154,6 +160,16 @@ export default function Navbar() {
             >
               Tournaments
             </Link>
+            {isLoggedIn && (
+              <Link
+                to="/create-tournament"
+                className="rounded px-3 py-2 font-display font-semibold uppercase tracking-wider text-muted-foreground hover:bg-muted hover:text-foreground"
+                onClick={() => setMobileOpen(false)}
+                data-ocid="nav.mobile.create_tournament.link"
+              >
+                Create Tournament
+              </Link>
+            )}
             {isAdmin && (
               <Link
                 to="/admin"
@@ -173,8 +189,7 @@ export default function Navbar() {
               className="flex items-center gap-2 rounded px-3 py-2 text-left font-display font-semibold uppercase tracking-wider text-primary hover:bg-muted"
               data-ocid="nav.mobile.support.button"
             >
-              <Heart className="h-4 w-4" />
-              Support Us
+              <Heart className="h-4 w-4" /> Support Us
             </button>
             {isLoggedIn ? (
               <>
@@ -207,7 +222,7 @@ export default function Navbar() {
                 className="mt-2 bg-primary font-display font-semibold uppercase tracking-wide text-white"
                 data-ocid="nav.mobile.login.button"
               >
-                Log In / Sign Up
+                Log In
               </Button>
             )}
           </nav>

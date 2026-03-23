@@ -141,6 +141,7 @@ export interface backendInterface {
     getTournamentPlayers(tournamentId: bigint): Promise<Array<PublicPlayer>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    isCallerTournamentCreator(tournamentId: bigint): Promise<boolean>;
     joinTournament(tournamentId: bigint): Promise<void>;
     kickPlayer(tournamentId: bigint, playerName: string): Promise<void>;
     reorderPlayers(tournamentId: bigint, orderedNames: Array<string>): Promise<void>;
@@ -319,6 +320,30 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+
+    async isCallerTournamentCreator(arg0: bigint): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.isCallerTournamentCreator(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.isCallerTournamentCreator(arg0);
+            return result;
+        }
+    }
+
+
+
+
+
+
+
+
+
     async joinTournament(arg0: bigint): Promise<void> {
         if (this.processError) {
             try {

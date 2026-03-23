@@ -16,19 +16,25 @@ import {
 
 export default function ProfilePage() {
   const { identity, login, loginStatus } = useInternetIdentity();
-  const isLoggedIn = loginStatus === "success" && !!identity;
+  const isLoggedIn = !!identity && loginStatus !== "initializing";
 
   const { data: profile, isLoading } = useUserProfile();
   const { data: allTournaments = [] } = useAllTournaments();
   const saveProfile = useSaveProfile();
-
   const [name, setName] = useState("");
 
   useEffect(() => {
-    if (profile) {
-      setName(profile.name);
-    }
+    if (profile) setName(profile.name);
   }, [profile]);
+
+  if (loginStatus === "initializing") {
+    return (
+      <div className="container mx-auto px-4 py-10">
+        <Skeleton className="h-10 w-48 mb-6" />
+        <Skeleton className="h-64 w-full rounded-lg" />
+      </div>
+    );
+  }
 
   if (!isLoggedIn) {
     return (
@@ -60,10 +66,7 @@ export default function ProfilePage() {
       return;
     }
     try {
-      await saveProfile.mutateAsync({
-        name: name.trim(),
-        rjzProfileLink: "",
-      });
+      await saveProfile.mutateAsync({ name: name.trim(), rjzProfileLink: "" });
       toast.success("Profile saved!");
     } catch {
       toast.error("Failed to save profile");
@@ -128,7 +131,6 @@ export default function ProfilePage() {
         </Card>
       )}
 
-      {/* Joined Tournaments */}
       <div>
         <h2 className="mb-4 font-display text-xl font-bold uppercase tracking-wide text-foreground">
           My Tournaments

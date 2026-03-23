@@ -75,9 +75,29 @@ export function useIsAdmin() {
     queryKey: ["isAdmin"],
     queryFn: async () => {
       if (!actor) return false;
-      return actor.isCallerAdmin();
+      try {
+        return await actor.isCallerAdmin();
+      } catch {
+        return false;
+      }
     },
     enabled: !!actor && !isFetching,
+  });
+}
+
+export function useIsCallerTournamentCreator(tournamentId: bigint | null) {
+  const { actor, isFetching } = useActor();
+  return useQuery<boolean>({
+    queryKey: ["isTournamentCreator", tournamentId?.toString()],
+    queryFn: async () => {
+      if (!actor || tournamentId === null) return false;
+      try {
+        return await actor.isCallerTournamentCreator(tournamentId);
+      } catch {
+        return false;
+      }
+    },
+    enabled: !!actor && !isFetching && tournamentId !== null,
   });
 }
 
@@ -178,6 +198,10 @@ export function useReportMatch() {
       qc.invalidateQueries({
         queryKey: ["matches", vars.tournamentId.toString()],
       });
+      qc.invalidateQueries({
+        queryKey: ["tournament", vars.tournamentId.toString()],
+      });
+      qc.invalidateQueries({ queryKey: ["tournaments"] });
     },
   });
 }

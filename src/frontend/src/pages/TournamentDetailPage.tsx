@@ -4,9 +4,10 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useParams } from "@tanstack/react-router";
 import { Code, Play, Trophy, UserPlus } from "lucide-react";
-import { useState } from "react";
+import { motion } from "motion/react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { TournamentStatus } from "../backend.d";
+import { MatchStatus, TournamentStatus } from "../backend.d";
 import BracketView from "../components/BracketView";
 import { statusBadge } from "../components/TournamentCard";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
@@ -14,6 +15,7 @@ import {
   useAddGuestPlayer,
   useBracketMatches,
   useIsAdmin,
+  useIsCallerTournamentCreator,
   useJoinTournament,
   useStartTournament,
   useTournament,
@@ -30,9 +32,13 @@ export default function TournamentDetailPage() {
     useBracketMatches(tournamentId);
   const { data: players = [] } = useTournamentPlayers(tournamentId);
   const { data: isAdmin } = useIsAdmin();
+  const { data: isTournamentCreator } =
+    useIsCallerTournamentCreator(tournamentId);
   const { data: profile } = useUserProfile();
   const { identity, loginStatus } = useInternetIdentity();
   const isLoggedIn = loginStatus === "success" && !!identity;
+
+  const canManage = !!isAdmin || !!isTournamentCreator;
 
   const joinTournament = useJoinTournament();
   const startTournament = useStartTournament();
@@ -40,6 +46,30 @@ export default function TournamentDetailPage() {
 
   const [guestName, setGuestName] = useState("");
   const embedUrl = `${window.location.origin}/embed/${id}`;
+
+  // Derive the tournament winner from the final match
+  const winnerName = useMemo(() => {
+    if (!matches.length) return null;
+    const maxRound = Math.max(...matches.map((m) => Number(m.round)));
+    // Detect 3rd place round: if last two rounds each have 1 match
+    const roundCounts = new Map<number, number>();
+    for (const m of matches) {
+      const r = Number(m.round);
+      roundCounts.set(r, (roundCounts.get(r) ?? 0) + 1);
+    }
+    const has3rdPlace =
+      roundCounts.get(maxRound) === 1 &&
+      roundCounts.get(maxRound - 1) === 1 &&
+      maxRound > 1;
+    const finalRound = has3rdPlace ? maxRound - 1 : maxRound;
+    const finalMatch = matches.find(
+      (m) => Number(m.round) === finalRound && Number(m.slot) === 1,
+    );
+    if (!finalMatch || finalMatch.status !== MatchStatus.completed) return null;
+    return Number(finalMatch.score1) >= Number(finalMatch.score2)
+      ? finalMatch.player1Name
+      : finalMatch.player2Name;
+  }, [matches]);
 
   const handleJoin = async () => {
     try {
@@ -98,9 +128,43 @@ export default function TournamentDetailPage() {
   }
 
   const isPendingTournament = tournament.status === TournamentStatus.pending;
+  const isCompletedTournament =
+    tournament.status === TournamentStatus.completed;
 
   return (
     <div className="container mx-auto px-4 py-10">
+      {/* Tournament Complete Banner */}
+      {isCompletedTournament && (
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="mb-6 rounded-lg border border-border bg-card px-5 py-4 flex items-center gap-3"
+          data-ocid="tournament.success_state"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
+            <Trophy className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="font-display text-sm font-bold uppercase tracking-widest text-foreground">
+              Tournament Complete
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {winnerName ? (
+                <>
+                  Winner:{" "}
+                  <span className="font-semibold text-foreground">
+                    {winnerName}
+                  </span>
+                </>
+              ) : (
+                "All matches have been played. Check the bracket for final results."
+              )}
+            </p>
+          </div>
+        </motion.div>
+      )}
+
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -134,9 +198,9 @@ export default function TournamentDetailPage() {
             <Code className="h-3 w-3" /> Embed
           </Button>
 
-          {/* Join - for logged-in players, pending tournament */}
+          {/* Join - for logged-in players, pending tournament, non-managers */}
           {isLoggedIn &&
-            !isAdmin &&
+            !canManage &&
             isPendingTournament &&
             (profile ? (
               <Button
@@ -162,8 +226,8 @@ export default function TournamentDetailPage() {
               </p>
             ))}
 
-          {/* Admin: Start tournament */}
-          {isAdmin && isPendingTournament && (
+          {/* Manager (admin or creator): Start tournament */}
+          {canManage && isPendingTournament && (
             <Button
               size="sm"
               onClick={handleStart}
@@ -178,8 +242,8 @@ export default function TournamentDetailPage() {
         </div>
       </div>
 
-      {/* Admin: Add Guest Player */}
-      {isAdmin && isPendingTournament && (
+      {/* Manager (admin or creator): Add Guest Player */}
+      {canManage && isPendingTournament && (
         <div className="mb-6 rounded-lg border border-border bg-card p-4">
           <h3 className="mb-3 font-display text-sm font-bold uppercase tracking-widest text-foreground">
             Add Guest Player
@@ -231,7 +295,7 @@ export default function TournamentDetailPage() {
               matches={matches}
               tournamentId={tournamentId}
               currentPlayerName={profile?.name}
-              isAdmin={isAdmin}
+              isAdmin={canManage}
               readOnly={false}
               players={players}
               isPending={isPendingTournament}
