@@ -249,6 +249,18 @@ actor {
     tournamentId;
   };
 
+  public query ({ caller }) func isCallerJoinedTournament(tournamentId : Nat) : async Bool {
+    if (caller.isAnonymous()) { return false };
+    let currentPlayers = switch (players.get(tournamentId)) { case (null) { return false }; case (?p) { p } };
+    for (p in currentPlayers.vals()) {
+      switch (p.id) {
+        case (?pid) { if (pid == caller) { return true } };
+        case (null) {};
+      };
+    };
+    false
+  };
+
   public shared ({ caller }) func joinTournament(tournamentId : Nat) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only registered users can join tournaments");
@@ -257,9 +269,36 @@ actor {
       case (null) { Runtime.trap("User profile not found") };
       case (?p) { p };
     };
-    let newPlayer : Player = { id = ?caller; name = profile.name; playerType = #registeredPlayer };
     let currentPlayers = switch (players.get(tournamentId)) { case (null) { [] }; case (?p) { p } };
+    // Check if caller already joined
+    for (p in currentPlayers.vals()) {
+      switch (p.id) {
+        case (?pid) { if (pid == caller) { Runtime.trap("Already registered for this tournament") } };
+        case (null) {};
+      };
+    };
+    let newPlayer : Player = { id = ?caller; name = profile.name; playerType = #registeredPlayer };
     players.add(tournamentId, currentPlayers.concat([newPlayer]));
+  };
+
+  public shared ({ caller }) func withdrawFromTournament(tournamentId : Nat) : async () {
+    if (caller.isAnonymous()) { Runtime.trap("Unauthorized: Must be logged in") };
+    let tournament = switch (tournaments.get(tournamentId)) {
+      case (null) { Runtime.trap("Tournament not found") };
+      case (?t) { t };
+    };
+    switch (tournament.status) {
+      case (#pending) {};
+      case (_) { Runtime.trap("Can only withdraw from pending tournaments") };
+    };
+    let currentPlayers = switch (players.get(tournamentId)) { case (null) { [] }; case (?p) { p } };
+    let filtered = currentPlayers.filter(func(p : Player) : Bool {
+      switch (p.id) {
+        case (?pid) { pid != caller };
+        case (null) { true };
+      };
+    });
+    players.add(tournamentId, filtered);
   };
 
   public shared ({ caller }) func addGuestPlayer(tournamentId : Nat, name : Text) : async () {

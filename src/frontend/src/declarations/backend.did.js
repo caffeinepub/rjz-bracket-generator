@@ -69,6 +69,7 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'isCallerJoinedTournament' : IDL.Func([IDL.Nat], [IDL.Bool], ['query']),
   'isCallerTournamentCreator' : IDL.Func([IDL.Nat], [IDL.Bool], ['query']),
   'joinTournament' : IDL.Func([IDL.Nat], [], []),
   'kickPlayer' : IDL.Func([IDL.Nat, IDL.Text], [], []),
@@ -80,6 +81,7 @@ export const idlService = IDL.Service({
     ),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'startTournament' : IDL.Func([IDL.Nat], [], []),
+  'withdrawFromTournament' : IDL.Func([IDL.Nat], [], []),
 });
 
 export const idlInitArgs = [];
@@ -147,6 +149,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'isCallerJoinedTournament' : IDL.Func([IDL.Nat], [IDL.Bool], ['query']),
     'isCallerTournamentCreator' : IDL.Func([IDL.Nat], [IDL.Bool], ['query']),
     'joinTournament' : IDL.Func([IDL.Nat], [], []),
     'kickPlayer' : IDL.Func([IDL.Nat, IDL.Text], [], []),
@@ -158,6 +161,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'startTournament' : IDL.Func([IDL.Nat], [], []),
+    'withdrawFromTournament' : IDL.Func([IDL.Nat], [], []),
   });
 };
 

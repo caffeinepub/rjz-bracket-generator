@@ -50,6 +50,7 @@ export interface _SERVICE {
   'getTournamentPlayers' : ActorMethod<[bigint], Array<PublicPlayer>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'isCallerJoinedTournament' : ActorMethod<[bigint], boolean>,
   'isCallerTournamentCreator' : ActorMethod<[bigint], boolean>,
   'joinTournament' : ActorMethod<[bigint], undefined>,
   'kickPlayer' : ActorMethod<[bigint, string], undefined>,
@@ -60,6 +61,7 @@ export interface _SERVICE {
   >,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'startTournament' : ActorMethod<[bigint], undefined>,
+  'withdrawFromTournament' : ActorMethod<[bigint], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

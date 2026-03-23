@@ -148,6 +148,7 @@ export interface backendInterface {
     reportMatch(tournamentId: bigint, round: bigint, slot: bigint, score1: bigint, score2: bigint, winnerId: Principal | null): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     startTournament(tournamentId: bigint): Promise<void>;
+    withdrawFromTournament(tournamentId: bigint): Promise<void>;
 }
 import type { Match as _Match, MatchStatus as _MatchStatus, Tournament as _Tournament, TournamentStatus as _TournamentStatus, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -336,14 +337,6 @@ export class Backend implements backendInterface {
         }
     }
 
-
-
-
-
-
-
-
-
     async joinTournament(arg0: bigint): Promise<void> {
         if (this.processError) {
             try {
@@ -425,6 +418,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.startTournament(arg0);
+            return result;
+        }
+    }
+    async withdrawFromTournament(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.withdrawFromTournament(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.withdrawFromTournament(arg0);
             return result;
         }
     }

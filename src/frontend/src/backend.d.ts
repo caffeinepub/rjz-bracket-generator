@@ -59,6 +59,7 @@ export interface backendInterface {
     getTournamentPlayers(tournamentId: bigint): Promise<Array<PublicPlayer>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    isCallerJoinedTournament(tournamentId: bigint): Promise<boolean>;
     isCallerTournamentCreator(tournamentId: bigint): Promise<boolean>;
     joinTournament(tournamentId: bigint): Promise<void>;
     kickPlayer(tournamentId: bigint, playerName: string): Promise<void>;
@@ -66,4 +67,5 @@ export interface backendInterface {
     reportMatch(tournamentId: bigint, round: bigint, slot: bigint, score1: bigint, score2: bigint, winnerId: Principal | null): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     startTournament(tournamentId: bigint): Promise<void>;
+    withdrawFromTournament(tournamentId: bigint): Promise<void>;
 }

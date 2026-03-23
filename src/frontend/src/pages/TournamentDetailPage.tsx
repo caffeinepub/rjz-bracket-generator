@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useParams } from "@tanstack/react-router";
-import { Code, Play, Trophy, UserPlus } from "lucide-react";
+import { Check, Code, LogOut, Play, Trophy, UserPlus } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -15,12 +15,14 @@ import {
   useAddGuestPlayer,
   useBracketMatches,
   useIsAdmin,
+  useIsCallerJoinedTournament,
   useIsCallerTournamentCreator,
   useJoinTournament,
   useStartTournament,
   useTournament,
   useTournamentPlayers,
   useUserProfile,
+  useWithdrawFromTournament,
 } from "../hooks/useQueries";
 
 export default function TournamentDetailPage() {
@@ -35,12 +37,14 @@ export default function TournamentDetailPage() {
   const { data: isTournamentCreator } =
     useIsCallerTournamentCreator(tournamentId);
   const { data: profile } = useUserProfile();
+  const { data: isJoined } = useIsCallerJoinedTournament(tournamentId);
   const { identity, loginStatus } = useInternetIdentity();
   const isLoggedIn = loginStatus === "success" && !!identity;
 
   const canManage = !!isAdmin || !!isTournamentCreator;
 
   const joinTournament = useJoinTournament();
+  const withdrawFromTournament = useWithdrawFromTournament();
   const startTournament = useStartTournament();
   const addGuestPlayer = useAddGuestPlayer();
 
@@ -77,6 +81,15 @@ export default function TournamentDetailPage() {
       toast.success("Joined tournament!");
     } catch {
       toast.error("Failed to join tournament");
+    }
+  };
+
+  const handleWithdraw = async () => {
+    try {
+      await withdrawFromTournament.mutateAsync(tournamentId);
+      toast.success("Withdrawn from tournament");
+    } catch {
+      toast.error("Failed to withdraw from tournament");
     }
   };
 
@@ -198,11 +211,25 @@ export default function TournamentDetailPage() {
             <Code className="h-3 w-3" /> Embed
           </Button>
 
-          {/* Join - for logged-in players, pending tournament, non-managers */}
+          {/* Join / Withdraw - for logged-in players, pending tournament, non-managers */}
           {isLoggedIn &&
             !canManage &&
             isPendingTournament &&
-            (profile ? (
+            (isJoined ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleWithdraw}
+                disabled={withdrawFromTournament.isPending}
+                className="border-border font-display font-bold uppercase tracking-wide text-xs gap-1"
+                data-ocid="tournament.withdraw.button"
+              >
+                <LogOut className="h-3 w-3" />
+                {withdrawFromTournament.isPending
+                  ? "Withdrawing..."
+                  : "Withdraw"}
+              </Button>
+            ) : profile ? (
               <Button
                 size="sm"
                 onClick={handleJoin}

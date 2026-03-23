@@ -101,6 +101,35 @@ export function useIsCallerTournamentCreator(tournamentId: bigint | null) {
   });
 }
 
+/**
+ * Derives whether the current user has already joined a tournament by
+ * comparing their profile name against the tournament's player list.
+ * This is a client-side check since the backend does not expose a
+ * dedicated isCallerJoinedTournament query.
+ */
+export function useIsCallerJoinedTournament(tournamentId: bigint | null) {
+  const { actor, isFetching } = useActor();
+  return useQuery<boolean>({
+    queryKey: ["isJoined", tournamentId?.toString()],
+    queryFn: async () => {
+      if (!actor || tournamentId === null) return false;
+      try {
+        const [profile, players] = await Promise.all([
+          actor.getCallerUserProfile(),
+          actor.getTournamentPlayers(tournamentId),
+        ]);
+        if (!profile) return false;
+        return players.some(
+          (p) => p.name.toLowerCase() === profile.name.toLowerCase(),
+        );
+      } catch {
+        return false;
+      }
+    },
+    enabled: !!actor && !isFetching && tournamentId !== null,
+  });
+}
+
 export function useCreateTournament() {
   const { actor } = useActor();
   const qc = useQueryClient();
@@ -148,6 +177,24 @@ export function useJoinTournament() {
     onSuccess: (_d, id) => {
       qc.invalidateQueries({ queryKey: ["tournament", id.toString()] });
       qc.invalidateQueries({ queryKey: ["players", id.toString()] });
+      qc.invalidateQueries({ queryKey: ["isJoined", id.toString()] });
+      qc.invalidateQueries({ queryKey: ["tournaments"] });
+    },
+  });
+}
+
+export function useWithdrawFromTournament() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (tournamentId: bigint) => {
+      if (!actor) throw new Error("Not authenticated");
+      return actor.withdrawFromTournament(tournamentId);
+    },
+    onSuccess: (_d, id) => {
+      qc.invalidateQueries({ queryKey: ["players", id.toString()] });
+      qc.invalidateQueries({ queryKey: ["isJoined", id.toString()] });
+      qc.invalidateQueries({ queryKey: ["tournament", id.toString()] });
       qc.invalidateQueries({ queryKey: ["tournaments"] });
     },
   });
