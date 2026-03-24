@@ -34,12 +34,6 @@ export type TournamentStatus = { 'active' : null } |
   { 'pending' : null } |
   { 'completed' : null };
 export interface UserProfile { 'name' : string, 'rjzProfileLink' : string }
-export interface UserStats {
-  'principal' : string,
-  'name' : string,
-  'tournamentCount' : bigint,
-  'isBanned' : boolean,
-}
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
@@ -47,10 +41,8 @@ export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'addGuestPlayer' : ActorMethod<[bigint, string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'banUser' : ActorMethod<[Principal], undefined>,
   'createTournament' : ActorMethod<[string, string, boolean], bigint>,
   'getAllTournaments' : ActorMethod<[], Array<Tournament>>,
-  'getAllUsers' : ActorMethod<[], Array<UserStats>>,
   'getBracketMatches' : ActorMethod<[bigint], Array<Match>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
@@ -69,7 +61,6 @@ export interface _SERVICE {
   >,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'startTournament' : ActorMethod<[bigint], undefined>,
-  'unbanUser' : ActorMethod<[Principal], undefined>,
   'withdrawFromTournament' : ActorMethod<[bigint], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;

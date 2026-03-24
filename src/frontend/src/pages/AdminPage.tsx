@@ -6,32 +6,19 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import type { Principal } from "@icp-sdk/core/principal";
 import { Link } from "@tanstack/react-router";
-import {
-  Ban,
-  Loader2,
-  Play,
-  Plus,
-  ShieldAlert,
-  Trophy,
-  Users,
-} from "lucide-react";
+import { Loader2, Play, Plus, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { TournamentStatus } from "../backend.d";
-import type { UserStats } from "../backend.d";
 import DonationModal from "../components/DonationModal";
 import TournamentCard from "../components/TournamentCard";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useAllTournaments,
-  useAllUsers,
-  useBanUser,
   useCreateTournament,
   useIsAdmin,
   useStartTournament,
-  useUnbanUser,
 } from "../hooks/useQueries";
 
 export default function AdminPage() {
@@ -40,17 +27,13 @@ export default function AdminPage() {
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
   const { data: tournaments = [], isLoading: tournamentsLoading } =
     useAllTournaments();
-  const { data: allUsers = [], isLoading: usersLoading } = useAllUsers();
   const createTournament = useCreateTournament();
   const startTournament = useStartTournament();
-  const banUser = useBanUser();
-  const unbanUser = useUnbanUser();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [has3rdPlace, setHas3rdPlace] = useState(false);
   const [showDonation, setShowDonation] = useState(false);
-  const [userSearch, setUserSearch] = useState("");
 
   if (loginStatus === "initializing") {
     return (
@@ -144,178 +127,15 @@ export default function AdminPage() {
     }
   };
 
-  const handleBan = async (user: UserStats) => {
-    try {
-      // Principal.fromText is available from the principal library
-      const { Principal } = await import("@icp-sdk/core/principal");
-      const p = Principal.fromText(user.principal);
-      await banUser.mutateAsync(p);
-      toast.success(`${user.name || user.principal.slice(0, 10)} banned.`);
-    } catch {
-      toast.error("Failed to ban user");
-    }
-  };
-
-  const handleUnban = async (user: UserStats) => {
-    try {
-      const { Principal } = await import("@icp-sdk/core/principal");
-      const p = Principal.fromText(user.principal);
-      await unbanUser.mutateAsync(p);
-      toast.success(`${user.name || user.principal.slice(0, 10)} unbanned.`);
-    } catch {
-      toast.error("Failed to unban user");
-    }
-  };
-
   const pendingTournaments = tournaments.filter(
     (t) => t.status === TournamentStatus.pending,
   );
-
-  const filteredUsers = allUsers.filter((u) => {
-    if (!userSearch.trim()) return true;
-    const q = userSearch.toLowerCase();
-    return (
-      u.name.toLowerCase().includes(q) || u.principal.toLowerCase().includes(q)
-    );
-  });
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-10">
       <h1 className="mb-8 font-display text-4xl font-black uppercase tracking-wide text-foreground">
         Admin Dashboard
       </h1>
-
-      {/* Stats Overview */}
-      <div className="mb-8 grid grid-cols-2 gap-4">
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <Users className="h-8 w-8 text-primary shrink-0" />
-            <div>
-              <p className="text-2xl font-black font-display text-foreground">
-                {usersLoading ? (
-                  <Skeleton className="h-7 w-12" />
-                ) : (
-                  allUsers.length
-                )}
-              </p>
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                Registered Users
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <Trophy className="h-8 w-8 text-primary shrink-0" />
-            <div>
-              <p className="text-2xl font-black font-display text-foreground">
-                {tournamentsLoading ? (
-                  <Skeleton className="h-7 w-12" />
-                ) : (
-                  tournaments.length
-                )}
-              </p>
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                Total Tournaments
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* User Management */}
-      <Card className="mb-8 border-border bg-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 font-display text-lg uppercase tracking-wide">
-            <Users className="h-5 w-5 text-primary" /> User Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Input
-            placeholder="Search by name or principal..."
-            value={userSearch}
-            onChange={(e) => setUserSearch(e.target.value)}
-            className="mb-4 bg-background"
-            data-ocid="admin.user_search.input"
-          />
-          {usersLoading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-12 rounded-lg" />
-              ))}
-            </div>
-          ) : filteredUsers.length === 0 ? (
-            <p className="text-center text-sm text-muted-foreground py-6">
-              {userSearch
-                ? "No users match your search."
-                : "No registered users yet."}
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {filteredUsers.map((user) => (
-                <div
-                  key={user.principal}
-                  className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 ${
-                    user.isBanned
-                      ? "border-destructive/40 bg-destructive/5"
-                      : "border-border bg-background"
-                  }`}
-                  data-ocid="admin.user_row"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-sm text-foreground truncate">
-                      {user.name || (
-                        <span className="text-muted-foreground italic">
-                          No name
-                        </span>
-                      )}
-                      {user.isBanned && (
-                        <span className="ml-2 text-xs font-bold uppercase text-destructive">
-                          Banned
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground font-mono truncate">
-                      {user.principal}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {Number(user.tournamentCount)} tournament
-                      {Number(user.tournamentCount) !== 1 ? "s" : ""} created
-                    </p>
-                  </div>
-                  <div className="shrink-0">
-                    {user.isBanned ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleUnban(user)}
-                        disabled={unbanUser.isPending}
-                        className="text-xs font-bold uppercase"
-                        data-ocid="admin.unban.button"
-                      >
-                        Unban
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleBan(user)}
-                        disabled={banUser.isPending}
-                        className="text-xs font-bold uppercase"
-                        data-ocid="admin.ban.button"
-                      >
-                        <Ban className="mr-1 h-3 w-3" /> Ban
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Separator className="mb-8" />
 
       <Card className="mb-8 border-border bg-card">
         <CardHeader>

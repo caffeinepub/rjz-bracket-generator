@@ -5,7 +5,6 @@ import type {
   PublicPlayer,
   Tournament,
   UserProfile,
-  UserStats,
 } from "../backend.d";
 import type { UserRole } from "../backend.d";
 import { useActor } from "./useActor";
@@ -105,6 +104,8 @@ export function useIsCallerTournamentCreator(tournamentId: bigint | null) {
 /**
  * Derives whether the current user has already joined a tournament by
  * comparing their profile name against the tournament's player list.
+ * This is a client-side check since the backend does not expose a
+ * dedicated isCallerJoinedTournament query.
  */
 export function useIsCallerJoinedTournament(tournamentId: bigint | null) {
   const { actor, isFetching } = useActor();
@@ -126,22 +127,6 @@ export function useIsCallerJoinedTournament(tournamentId: bigint | null) {
       }
     },
     enabled: !!actor && !isFetching && tournamentId !== null,
-  });
-}
-
-export function useAllUsers() {
-  const { actor, isFetching } = useActor();
-  return useQuery<UserStats[]>({
-    queryKey: ["allUsers"],
-    queryFn: async () => {
-      if (!actor) return [];
-      try {
-        return await actor.getAllUsers();
-      } catch {
-        return [];
-      }
-    },
-    enabled: !!actor && !isFetching,
   });
 }
 
@@ -324,29 +309,5 @@ export function useReorderPlayers() {
         queryKey: ["players", vars.tournamentId.toString()],
       });
     },
-  });
-}
-
-export function useBanUser() {
-  const { actor } = useActor();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (principal: Principal) => {
-      if (!actor) throw new Error("Not authenticated");
-      return actor.banUser(principal);
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["allUsers"] }),
-  });
-}
-
-export function useUnbanUser() {
-  const { actor } = useActor();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (principal: Principal) => {
-      if (!actor) throw new Error("Not authenticated");
-      return actor.unbanUser(principal);
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["allUsers"] }),
   });
 }
