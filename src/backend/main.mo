@@ -25,6 +25,13 @@ actor {
     rjzProfileLink : Text;
   };
 
+  public type UserStats = {
+    principal : Text;
+    name : Text;
+    tournamentCount : Nat;
+    isBanned : Bool;
+  };
+
   public type Tournament = {
     id : Nat;
     name : Text;
@@ -77,12 +84,14 @@ actor {
   var stableAdminAssigned : Bool = false;
   var stableUserRoles : [(Principal, AccessControl.UserRole)] = [];
   var stableTournamentCreators : [(Nat, Principal)] = [];
+  var stableBannedUsers : [(Principal, Bool)] = [];
 
   let userProfiles = Map.empty<Principal, UserProfile>();
   let tournaments = Map.empty<Nat, Tournament>();
   let players = Map.empty<Nat, [Player]>();
   let tournamentMatches = Map.empty<Nat, [Match]>();
   let tournamentCreators = Map.empty<Nat, Principal>();
+  let bannedUsers = Map.empty<Principal, Bool>();
 
   system func preupgrade() {
     stableUserProfiles := userProfiles.entries().toArray();
@@ -92,6 +101,7 @@ actor {
     stableAdminAssigned := accessControlState.adminAssigned;
     stableUserRoles := accessControlState.userRoles.entries().toArray();
     stableTournamentCreators := tournamentCreators.entries().toArray();
+    stableBannedUsers := bannedUsers.entries().toArray();
   };
 
   system func postupgrade() {
@@ -102,6 +112,14 @@ actor {
     accessControlState.adminAssigned := stableAdminAssigned;
     for ((k, v) in stableUserRoles.vals()) { accessControlState.userRoles.add(k, v) };
     for ((k, v) in stableTournamentCreators.vals()) { tournamentCreators.add(k, v) };
+    for ((k, v) in stableBannedUsers.vals()) { bannedUsers.add(k, v) };
+  };
+
+  func isBannedUser(caller : Principal) : Bool {
+    switch (bannedUsers.get(caller)) {
+      case (?true) { true };
+      case (_) { false };
+    };
   };
 
   func isAdminOrCreator(caller : Principal, tournamentId : Nat) : Bool {
@@ -234,12 +252,14 @@ actor {
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
     if (caller.isAnonymous()) { Runtime.trap("Unauthorized: Must be logged in to save a profile") };
+    if (isBannedUser(caller)) { Runtime.trap("Banned: Your account has been banned") };
     if (accessControlState.userRoles.get(caller) == null) { accessControlState.userRoles.add(caller, #user) };
     userProfiles.add(caller, profile);
   };
 
   public shared ({ caller }) func createTournament(name : Text, description : Text, has3rdPlaceMatch : Bool) : async Nat {
     if (caller.isAnonymous()) { Runtime.trap("Unauthorized: Must be logged in to create a tournament") };
+    if (isBannedUser(caller)) { Runtime.trap("Banned: Your account has been banned") };
     if (accessControlState.userRoles.get(caller) == null) { accessControlState.userRoles.add(caller, #user) };
     let tournamentId = nextTournamentId;
     nextTournamentId += 1;
@@ -265,12 +285,12 @@ actor {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only registered users can join tournaments");
     };
+    if (isBannedUser(caller)) { Runtime.trap("Banned: Your account has been banned") };
     let profile = switch (userProfiles.get(caller)) {
       case (null) { Runtime.trap("User profile not found") };
       case (?p) { p };
     };
     let currentPlayers = switch (players.get(tournamentId)) { case (null) { [] }; case (?p) { p } };
-    // Check if caller already joined
     for (p in currentPlayers.vals()) {
       switch (p.id) {
         case (?pid) { if (pid == caller) { Runtime.trap("Already registered for this tournament") } };
@@ -416,5 +436,41 @@ actor {
       case (null) { [] };
       case (?ps) { ps.map(func(p) : PublicPlayer { { name = p.name; isGuest = p.playerType == #guestPlayer } }) };
     };
+  };
+
+  public query ({ caller }) func getAllUsers() : async [UserStats] {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Admins only");
+    };
+    let creatorEntries = tournamentCreators.entries().toArray();
+    accessControlState.userRoles.entries().toArray().map(func((principal, _role) : (Principal, AccessControl.UserRole)) : UserStats {
+      let name = switch (userProfiles.get(principal)) {
+        case (?p) { p.name };
+        case (null) { "" };
+      };
+      var count : Nat = 0;
+      for ((_, creator) in creatorEntries.vals()) {
+        if (creator == principal) { count += 1 };
+      };
+      let banned = switch (bannedUsers.get(principal)) {
+        case (?true) { true };
+        case (_) { false };
+      };
+      { principal = principal.toText(); name; tournamentCount = count; isBanned = banned };
+    });
+  };
+
+  public shared ({ caller }) func banUser(user : Principal) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Admins only");
+    };
+    bannedUsers.add(user, true);
+  };
+
+  public shared ({ caller }) func unbanUser(user : Principal) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Admins only");
+    };
+    ignore bannedUsers.remove(user);
   };
 };

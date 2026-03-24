@@ -114,6 +114,12 @@ export interface UserProfile {
     name: string;
     rjzProfileLink: string;
 }
+export interface UserStats {
+    principal: string;
+    name: string;
+    tournamentCount: bigint;
+    isBanned: boolean;
+}
 export enum MatchStatus {
     scheduled = "scheduled",
     completed = "completed"
@@ -132,8 +138,10 @@ export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     addGuestPlayer(tournamentId: bigint, name: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    banUser(user: Principal): Promise<void>;
     createTournament(name: string, description: string, has3rdPlaceMatch: boolean): Promise<bigint>;
     getAllTournaments(): Promise<Array<Tournament>>;
+    getAllUsers(): Promise<Array<UserStats>>;
     getBracketMatches(tournamentId: bigint): Promise<Array<Match>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
@@ -148,6 +156,7 @@ export interface backendInterface {
     reportMatch(tournamentId: bigint, round: bigint, slot: bigint, score1: bigint, score2: bigint, winnerId: Principal | null): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     startTournament(tournamentId: bigint): Promise<void>;
+    unbanUser(user: Principal): Promise<void>;
     withdrawFromTournament(tournamentId: bigint): Promise<void>;
 }
 import type { Match as _Match, MatchStatus as _MatchStatus, Tournament as _Tournament, TournamentStatus as _TournamentStatus, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
@@ -195,6 +204,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async banUser(arg0: Principal): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.banUser(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.banUser(arg0);
+            return result;
+        }
+    }
     async createTournament(arg0: string, arg1: string, arg2: boolean): Promise<bigint> {
         if (this.processError) {
             try {
@@ -221,6 +244,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getAllTournaments();
             return from_candid_vec_n3(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getAllUsers(): Promise<Array<UserStats>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllUsers();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllUsers();
+            return result;
         }
     }
     async getBracketMatches(arg0: bigint): Promise<Array<Match>> {
@@ -418,6 +455,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.startTournament(arg0);
+            return result;
+        }
+    }
+    async unbanUser(arg0: Principal): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.unbanUser(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.unbanUser(arg0);
             return result;
         }
     }
