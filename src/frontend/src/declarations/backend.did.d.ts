@@ -37,11 +37,26 @@ export interface UserProfile { 'name' : string, 'rjzProfileLink' : string }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
+export interface UserInfo {
+  'principal' : Principal,
+  'name' : string,
+  'tournamentCount' : bigint,
+  'isBanned' : boolean,
+}
+export interface AdminStats {
+  'totalUsers' : bigint,
+  'totalTournaments' : bigint,
+  'users' : Array<UserInfo>,
+}
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'addGuestPlayer' : ActorMethod<[bigint, string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'banUser' : ActorMethod<[Principal], undefined>,
+  'unbanUser' : ActorMethod<[Principal], undefined>,
   'createTournament' : ActorMethod<[string, string, boolean], bigint>,
+  'deleteTournament' : ActorMethod<[bigint], undefined>,
+  'getAdminStats' : ActorMethod<[], AdminStats>,
   'getAllTournaments' : ActorMethod<[], Array<Tournament>>,
   'getBracketMatches' : ActorMethod<[bigint], Array<Match>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,

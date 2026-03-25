@@ -55,6 +55,13 @@ actor {
     status : MatchStatus;
   };
 
+  public type UserInfo = {
+    principal : Principal;
+    name : Text;
+    tournamentCount : Nat;
+    isBanned : Bool;
+  };
+
   module Tournament {
     public func compareByStatus(t1 : Tournament, t2 : Tournament) : Order.Order {
       switch (t1.status, t2.status) {
@@ -77,12 +84,14 @@ actor {
   var stableAdminAssigned : Bool = false;
   var stableUserRoles : [(Principal, AccessControl.UserRole)] = [];
   var stableTournamentCreators : [(Nat, Principal)] = [];
+  var stableBannedUsers : [(Principal, Bool)] = [];
 
   let userProfiles = Map.empty<Principal, UserProfile>();
   let tournaments = Map.empty<Nat, Tournament>();
   let players = Map.empty<Nat, [Player]>();
   let tournamentMatches = Map.empty<Nat, [Match]>();
   let tournamentCreators = Map.empty<Nat, Principal>();
+  let bannedUsers = Map.empty<Principal, Bool>();
 
   system func preupgrade() {
     stableUserProfiles := userProfiles.entries().toArray();
@@ -92,6 +101,7 @@ actor {
     stableAdminAssigned := accessControlState.adminAssigned;
     stableUserRoles := accessControlState.userRoles.entries().toArray();
     stableTournamentCreators := tournamentCreators.entries().toArray();
+    stableBannedUsers := bannedUsers.entries().toArray();
   };
 
   system func postupgrade() {
@@ -102,6 +112,11 @@ actor {
     accessControlState.adminAssigned := stableAdminAssigned;
     for ((k, v) in stableUserRoles.vals()) { accessControlState.userRoles.add(k, v) };
     for ((k, v) in stableTournamentCreators.vals()) { tournamentCreators.add(k, v) };
+    for ((k, v) in stableBannedUsers.vals()) { bannedUsers.add(k, v) };
+  };
+
+  func isUserBanned(p : Principal) : Bool {
+    switch (bannedUsers.get(p)) { case (?true) true; case (_) false };
   };
 
   func isAdminOrCreator(caller : Principal, tournamentId : Nat) : Bool {
@@ -118,6 +133,40 @@ actor {
     accessControlState.userRoles.add(caller, #admin);
     accessControlState.adminAssigned := true;
     true
+  };
+
+  public shared ({ caller }) func banUser(user : Principal) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) { Runtime.trap("Unauthorized: Only admins can ban users") };
+    bannedUsers.add(user, true);
+  };
+
+  public shared ({ caller }) func unbanUser(user : Principal) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) { Runtime.trap("Unauthorized: Only admins can unban users") };
+    bannedUsers.add(user, false);
+  };
+
+  public shared ({ caller }) func deleteTournament(tournamentId : Nat) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can delete tournaments");
+    };
+    tournaments.remove(tournamentId);
+    players.remove(tournamentId);
+    tournamentMatches.remove(tournamentId);
+    tournamentCreators.remove(tournamentId);
+  };
+
+  public shared query ({ caller }) func getAdminStats() : async { totalUsers : Nat; totalTournaments : Nat; users : [UserInfo] } {
+    if (not AccessControl.isAdmin(accessControlState, caller)) { Runtime.trap("Unauthorized: Only admins can view stats") };
+    let allUsers = accessControlState.userRoles.entries().toArray();
+    let users = allUsers.map(func((p, _role) : (Principal, AccessControl.UserRole)) : UserInfo {
+      let name = switch (userProfiles.get(p)) { case (?prof) prof.name; case (null) "" };
+      var count : Nat = 0;
+      for ((_, creator) in tournamentCreators.entries()) {
+        if (creator == p) { count += 1 };
+      };
+      { principal = p; name; tournamentCount = count; isBanned = isUserBanned(p) };
+    });
+    { totalUsers = allUsers.size(); totalTournaments = tournaments.size(); users }
   };
 
   func pow2(n : Nat) : Nat {
@@ -208,15 +257,10 @@ actor {
     result
   };
 
-  // A tournament is finished when:
-  // - All matches with real players are completed, AND
-  // - If a 3rd place match exists, it must also be completed (even if its player slots
-  //   were not yet populated when an earlier match was reported)
   func isTournamentFinished(matches : [Match], has3rdPlaceMatch : Bool) : Bool {
     var maxRound : Nat = 0;
     for (m in matches.vals()) { if (m.round > maxRound) maxRound := m.round };
     if (maxRound == 0) { return false };
-    // If a 3rd place match is enabled, explicitly require it to be completed
     if (has3rdPlaceMatch) {
       var thirdPlaceDone = false;
       for (m in matches.vals()) {
@@ -224,7 +268,6 @@ actor {
       };
       if (not thirdPlaceDone) { return false };
     };
-    // All matches with real (non-empty, non-BYE) players must be completed
     for (m in matches.vals()) {
       let hasPlayers = m.player1Name != "" and m.player2Name != "" and m.player1Name != "BYE" and m.player2Name != "BYE";
       if (hasPlayers and m.status != #completed) { return false };
@@ -247,12 +290,14 @@ actor {
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
     if (caller.isAnonymous()) { Runtime.trap("Unauthorized: Must be logged in to save a profile") };
+    if (isUserBanned(caller)) { Runtime.trap("Banned: Your account has been suspended") };
     if (accessControlState.userRoles.get(caller) == null) { accessControlState.userRoles.add(caller, #user) };
     userProfiles.add(caller, profile);
   };
 
   public shared ({ caller }) func createTournament(name : Text, description : Text, has3rdPlaceMatch : Bool) : async Nat {
     if (caller.isAnonymous()) { Runtime.trap("Unauthorized: Must be logged in to create a tournament") };
+    if (isUserBanned(caller)) { Runtime.trap("Banned: Your account has been suspended") };
     if (accessControlState.userRoles.get(caller) == null) { accessControlState.userRoles.add(caller, #user) };
     let tournamentId = nextTournamentId;
     nextTournamentId += 1;
@@ -275,6 +320,7 @@ actor {
   };
 
   public shared ({ caller }) func joinTournament(tournamentId : Nat) : async () {
+    if (isUserBanned(caller)) { Runtime.trap("Banned: Your account has been suspended") };
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only registered users can join tournaments");
     };
@@ -283,7 +329,6 @@ actor {
       case (?p) { p };
     };
     let currentPlayers = switch (players.get(tournamentId)) { case (null) { [] }; case (?p) { p } };
-    // Check if caller already joined
     for (p in currentPlayers.vals()) {
       switch (p.id) {
         case (?pid) { if (pid == caller) { Runtime.trap("Already registered for this tournament") } };

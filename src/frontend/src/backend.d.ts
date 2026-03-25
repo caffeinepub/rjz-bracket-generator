@@ -32,6 +32,17 @@ export interface UserProfile {
     name: string;
     rjzProfileLink: string;
 }
+export interface UserInfo {
+    principal: Principal;
+    name: string;
+    tournamentCount: bigint;
+    isBanned: boolean;
+}
+export interface AdminStats {
+    totalUsers: bigint;
+    totalTournaments: bigint;
+    users: Array<UserInfo>;
+}
 export enum MatchStatus {
     scheduled = "scheduled",
     completed = "completed"
@@ -49,8 +60,12 @@ export enum UserRole {
 export interface backendInterface {
     addGuestPlayer(tournamentId: bigint, name: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    banUser(user: Principal): Promise<void>;
+    unbanUser(user: Principal): Promise<void>;
     claimAdminByToken(token: string): Promise<boolean>;
     createTournament(name: string, description: string, has3rdPlaceMatch: boolean): Promise<bigint>;
+    deleteTournament(tournamentId: bigint): Promise<void>;
+    getAdminStats(): Promise<AdminStats>;
     getAllTournaments(): Promise<Array<Tournament>>;
     getBracketMatches(tournamentId: bigint): Promise<Array<Match>>;
     getCallerUserProfile(): Promise<UserProfile | null>;

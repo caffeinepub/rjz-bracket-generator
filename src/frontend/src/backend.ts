@@ -114,6 +114,17 @@ export interface UserProfile {
     name: string;
     rjzProfileLink: string;
 }
+export interface UserInfo {
+    principal: Principal;
+    name: string;
+    tournamentCount: bigint;
+    isBanned: boolean;
+}
+export interface AdminStats {
+    totalUsers: bigint;
+    totalTournaments: bigint;
+    users: Array<UserInfo>;
+}
 export enum MatchStatus {
     scheduled = "scheduled",
     completed = "completed"
@@ -132,7 +143,11 @@ export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     addGuestPlayer(tournamentId: bigint, name: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    banUser(user: Principal): Promise<void>;
+    unbanUser(user: Principal): Promise<void>;
     createTournament(name: string, description: string, has3rdPlaceMatch: boolean): Promise<bigint>;
+    deleteTournament(tournamentId: bigint): Promise<void>;
+    getAdminStats(): Promise<AdminStats>;
     getAllTournaments(): Promise<Array<Tournament>>;
     getBracketMatches(tournamentId: bigint): Promise<Array<Match>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
@@ -150,7 +165,7 @@ export interface backendInterface {
     startTournament(tournamentId: bigint): Promise<void>;
     withdrawFromTournament(tournamentId: bigint): Promise<void>;
 }
-import type { Match as _Match, MatchStatus as _MatchStatus, Tournament as _Tournament, TournamentStatus as _TournamentStatus, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
+import type { Match as _Match, MatchStatus as _MatchStatus, Tournament as _Tournament, TournamentStatus as _TournamentStatus, UserProfile as _UserProfile, UserRole as _UserRole, UserInfo as _UserInfo, AdminStats as _AdminStats } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _initializeAccessControlWithSecret(arg0: string): Promise<void> {
@@ -195,6 +210,34 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async banUser(arg0: Principal): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.banUser(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.banUser(arg0);
+            return result;
+        }
+    }
+    async unbanUser(arg0: Principal): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.unbanUser(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.unbanUser(arg0);
+            return result;
+        }
+    }
     async createTournament(arg0: string, arg1: string, arg2: boolean): Promise<bigint> {
         if (this.processError) {
             try {
@@ -206,6 +249,34 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.createTournament(arg0, arg1, arg2);
+            return result;
+        }
+    }
+    async deleteTournament(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteTournament(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteTournament(arg0);
+            return result;
+        }
+    }
+    async getAdminStats(): Promise<AdminStats> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAdminStats();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAdminStats();
             return result;
         }
     }

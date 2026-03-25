@@ -47,12 +47,27 @@ export const PublicPlayer = IDL.Record({
   'isGuest' : IDL.Bool,
   'name' : IDL.Text,
 });
+export const UserInfo = IDL.Record({
+  'principal' : IDL.Principal,
+  'name' : IDL.Text,
+  'tournamentCount' : IDL.Nat,
+  'isBanned' : IDL.Bool,
+});
+export const AdminStats = IDL.Record({
+  'totalUsers' : IDL.Nat,
+  'totalTournaments' : IDL.Nat,
+  'users' : IDL.Vec(UserInfo),
+});
 
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'addGuestPlayer' : IDL.Func([IDL.Nat, IDL.Text], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'banUser' : IDL.Func([IDL.Principal], [], []),
+  'unbanUser' : IDL.Func([IDL.Principal], [], []),
   'createTournament' : IDL.Func([IDL.Text, IDL.Text, IDL.Bool], [IDL.Nat], []),
+  'deleteTournament' : IDL.Func([IDL.Nat], [], []),
+  'getAdminStats' : IDL.Func([], [AdminStats], ['query']),
   'getAllTournaments' : IDL.Func([], [IDL.Vec(Tournament)], ['query']),
   'getBracketMatches' : IDL.Func([IDL.Nat], [IDL.Vec(Match)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
@@ -123,16 +138,31 @@ export const idlFactory = ({ IDL }) => {
     'rjzProfileLink' : IDL.Text,
   });
   const PublicPlayer = IDL.Record({ 'isGuest' : IDL.Bool, 'name' : IDL.Text });
+  const UserInfo = IDL.Record({
+    'principal' : IDL.Principal,
+    'name' : IDL.Text,
+    'tournamentCount' : IDL.Nat,
+    'isBanned' : IDL.Bool,
+  });
+  const AdminStats = IDL.Record({
+    'totalUsers' : IDL.Nat,
+    'totalTournaments' : IDL.Nat,
+    'users' : IDL.Vec(UserInfo),
+  });
   
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'addGuestPlayer' : IDL.Func([IDL.Nat, IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'banUser' : IDL.Func([IDL.Principal], [], []),
+    'unbanUser' : IDL.Func([IDL.Principal], [], []),
     'createTournament' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Bool],
         [IDL.Nat],
         [],
       ),
+    'deleteTournament' : IDL.Func([IDL.Nat], [], []),
+    'getAdminStats' : IDL.Func([], [AdminStats], ['query']),
     'getAllTournaments' : IDL.Func([], [IDL.Vec(Tournament)], ['query']),
     'getBracketMatches' : IDL.Func([IDL.Nat], [IDL.Vec(Match)], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),

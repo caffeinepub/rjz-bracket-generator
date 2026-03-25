@@ -134,7 +134,11 @@ export default function PreviewBracket({
       setDragIdx(null);
       setDragOverIdx(null);
       reorderPlayers.mutate(
-        { tournamentId, orderedNames: reordered.map((p) => p.name) },
+        {
+          tournamentId,
+          orderedNames: reordered.map((p) => p.name),
+          players: reordered,
+        },
         {
           onSuccess: () => toast.success("Seeds reordered!"),
           onError: () => toast.error("Failed to reorder players"),
@@ -171,7 +175,11 @@ export default function PreviewBracket({
     }
     setLocalPlayers(shuffled);
     reorderPlayers.mutate(
-      { tournamentId, orderedNames: shuffled.map((p) => p.name) },
+      {
+        tournamentId,
+        orderedNames: shuffled.map((p) => p.name),
+        players: shuffled,
+      },
       {
         onSuccess: () => toast.success("Seeds shuffled!"),
         onError: () => toast.error("Failed to shuffle seeds"),
@@ -220,11 +228,12 @@ export default function PreviewBracket({
               variant="ghost"
               size="sm"
               onClick={handleShuffle}
+              disabled={reorderPlayers.isPending}
               className="h-6 gap-1 px-2 text-xs"
               data-ocid="bracket.shuffle.button"
             >
               <Shuffle className="h-3 w-3" />
-              Shuffle
+              {reorderPlayers.isPending ? "Saving..." : "Shuffle"}
             </Button>
           )}
         </div>
