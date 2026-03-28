@@ -10,6 +10,7 @@ import { Loader2, Plus, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import DonationModal from "../components/DonationModal";
+import SectionEditor from "../components/SectionEditor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useCreateTournament } from "../hooks/useQueries";
 
@@ -21,6 +22,7 @@ export default function CreateTournamentPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [sectionsValue, setSectionsValue] = useState("");
   const [has3rdPlace, setHas3rdPlace] = useState(false);
   const [showDonation, setShowDonation] = useState(false);
 
@@ -60,10 +62,20 @@ export default function CreateTournamentPage() {
       toast.error("Tournament name is required");
       return;
     }
+    const plainDesc = description.trim();
+    const sections = sectionsValue.trim();
+    let combined = "";
+    if (plainDesc && sections) {
+      combined = `${plainDesc}\n\n${sections}`;
+    } else if (plainDesc) {
+      combined = plainDesc;
+    } else if (sections) {
+      combined = sections;
+    }
     try {
       const id = await createTournament.mutateAsync({
         name: name.trim(),
-        description: description.trim(),
+        description: combined,
         has3rdPlaceMatch: has3rdPlace,
       });
       toast.success("Tournament created!");
@@ -103,29 +115,43 @@ export default function CreateTournamentPage() {
                 placeholder="e.g. Summer Open 2026"
                 required
                 className="bg-background"
+                data-ocid="create_tournament.input"
               />
             </div>
+
             <div className="space-y-1.5">
               <Label
-                htmlFor="tournamentDesc"
+                htmlFor="tournamentDescription"
                 className="font-display text-xs font-bold uppercase tracking-widest text-muted-foreground"
               >
-                Description
+                Description (optional)
               </Label>
               <Textarea
-                id="tournamentDesc"
+                id="tournamentDescription"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe the tournament..."
-                rows={3}
-                className="bg-background resize-none"
+                placeholder="Describe your tournament..."
+                className="bg-background min-h-[80px] resize-y"
+                data-ocid="create_tournament.textarea"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label className="font-display text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Additional Sections (optional)
+              </Label>
+              <SectionEditor
+                value={sectionsValue}
+                onChange={setSectionsValue}
+              />
+            </div>
+
             <div className="flex items-center gap-3">
               <Switch
                 id="has3rdPlace"
                 checked={has3rdPlace}
                 onCheckedChange={setHas3rdPlace}
+                data-ocid="create_tournament.switch"
               />
               <Label
                 htmlFor="has3rdPlace"
@@ -138,6 +164,7 @@ export default function CreateTournamentPage() {
               type="submit"
               disabled={createTournament.isPending}
               className="w-full bg-primary font-display font-bold uppercase tracking-wide text-white"
+              data-ocid="create_tournament.submit_button"
             >
               {createTournament.isPending ? (
                 <>

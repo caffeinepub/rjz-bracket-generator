@@ -21,31 +21,13 @@ module {
     };
   };
 
-  // First principal that calls this function becomes admin automatically.
-  // No token match required -- the first-login admin pattern.
-  // Self-heals: if adminAssigned=true but no principal actually has #admin,
-  // the flag is reset so the next login gets admin.
-  public func initialize(state : AccessControlState, caller : Principal, _adminToken : Text, _userProvidedToken : Text) {
+  // First principal that calls this function becomes admin, all other principals become users.
+  public func initialize(state : AccessControlState, caller : Principal, adminToken : Text, userProvidedToken : Text) {
     if (caller.isAnonymous()) { return };
-
-    // Self-heal: reset adminAssigned if nobody actually has the admin role
-    if (state.adminAssigned) {
-      var hasAdmin = false;
-      for ((_, role) in state.userRoles.entries()) {
-        if (role == #admin) { hasAdmin := true };
-      };
-      if (not hasAdmin) {
-        state.adminAssigned := false;
-      };
-    };
-
     switch (state.userRoles.get(caller)) {
-      case (?_) {
-        // Already registered, nothing to do
-      };
+      case (?_) {};
       case (null) {
-        if (not state.adminAssigned) {
-          // First login -- grant admin
+        if (not state.adminAssigned and userProvidedToken == adminToken) {
           state.userRoles.add(caller, #admin);
           state.adminAssigned := true;
         } else {
@@ -55,14 +37,13 @@ module {
     };
   };
 
-  // Returns #guest for unknown principals instead of trapping.
-  // This prevents isCallerAdmin() and hasPermission() from crashing
-  // for users who haven't called initialize yet.
   public func getUserRole(state : AccessControlState, caller : Principal) : UserRole {
     if (caller.isAnonymous()) { return #guest };
     switch (state.userRoles.get(caller)) {
       case (?role) { role };
-      case (null) { #guest };
+      case (null) {
+        Runtime.trap("User is not registered");
+      };
     };
   };
 

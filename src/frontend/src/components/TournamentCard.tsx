@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Trophy, Users } from "lucide-react";
+import { ArrowRight, Trophy } from "lucide-react";
 import type { Tournament } from "../backend.d";
 import { TournamentStatus } from "../backend.d";
 
@@ -36,6 +36,10 @@ export default function TournamentCard({
   tournament,
   index = 1,
 }: TournamentCardProps) {
+  const plainDesc = tournament.description?.includes("<!-- SECTION:")
+    ? tournament.description.split("<!-- SECTION:")[0].trim()
+    : tournament.description;
+
   return (
     <Link
       to="/tournaments/$id"
@@ -51,7 +55,7 @@ export default function TournamentCard({
           {statusBadge(tournament.status)}
         </div>
         <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
-          {tournament.description || "No description."}
+          {plainDesc || "No description."}
         </p>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 text-xs text-muted-foreground">

@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Link } from "@tanstack/react-router";
 import {
   ChevronRight,
+  Search,
   Settings,
   Swords,
   Trophy,
@@ -9,6 +11,8 @@ import {
   Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { useState } from "react";
+import { TournamentStatus } from "../backend.d";
 import TournamentCard from "../components/TournamentCard";
 import { useAllTournaments } from "../hooks/useQueries";
 
@@ -35,9 +39,32 @@ const FEATURES = [
   },
 ];
 
+const STATUS_ORDER: Record<TournamentStatus, number> = {
+  [TournamentStatus.pending]: 0,
+  [TournamentStatus.active]: 1,
+  [TournamentStatus.completed]: 2,
+};
+
 export default function HomePage() {
   const { data: tournaments } = useAllTournaments();
-  const liveTournaments = (tournaments ?? []).slice(0, 6);
+  const [query, setQuery] = useState("");
+
+  const allTournaments = tournaments ?? [];
+
+  const filtered = query.trim()
+    ? allTournaments
+        .filter((t) => {
+          const q = query.toLowerCase();
+          const plainDesc = t.description?.includes("<!-- SECTION:")
+            ? t.description.split("<!-- SECTION:")[0].toLowerCase()
+            : (t.description ?? "").toLowerCase();
+          return t.name.toLowerCase().includes(q) || plainDesc.includes(q);
+        })
+        .sort(
+          (a, b) =>
+            (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3),
+        )
+    : allTournaments.slice(0, 6);
 
   return (
     <div>
@@ -141,9 +168,21 @@ export default function HomePage() {
       {/* Live Tournaments */}
       <section className="py-16">
         <div className="container mx-auto px-4">
+          {/* Search */}
+          <div className="mb-6 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search tournaments by name, game, or description..."
+              className="pl-10 bg-card border-border focus:border-primary/50"
+              data-ocid="home.search.input"
+            />
+          </div>
+
           <div className="mb-8 flex items-center justify-between">
             <h2 className="font-display text-3xl font-black uppercase tracking-wide text-foreground">
-              Live Tournaments
+              {query.trim() ? `Results for "${query}"` : "Live Tournaments"}
             </h2>
             <Button
               asChild
@@ -156,13 +195,15 @@ export default function HomePage() {
             </Button>
           </div>
 
-          {liveTournaments.length === 0 ? (
+          {filtered.length === 0 ? (
             <div
               className="flex h-48 items-center justify-center rounded-lg border border-dashed border-border"
               data-ocid="home.tournaments.empty_state"
             >
               <p className="text-sm text-muted-foreground">
-                No tournaments yet. Check back soon!
+                {query.trim()
+                  ? `No tournaments found for "${query}".`
+                  : "No tournaments yet. Check back soon!"}
               </p>
             </div>
           ) : (
@@ -170,7 +211,7 @@ export default function HomePage() {
               className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
               data-ocid="home.tournaments.list"
             >
-              {liveTournaments.map((t, i) => (
+              {filtered.map((t, i) => (
                 <TournamentCard
                   key={t.id.toString()}
                   tournament={t}

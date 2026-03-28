@@ -3,12 +3,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useParams } from "@tanstack/react-router";
-import { Check, Code, LogOut, Play, Trophy, UserPlus } from "lucide-react";
+import { Code, LogOut, Play, Trophy, UserPlus } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { MatchStatus, TournamentStatus } from "../backend.d";
 import BracketView from "../components/BracketView";
+import SectionRenderer from "../components/SectionRenderer";
 import { statusBadge } from "../components/TournamentCard";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
@@ -51,11 +52,9 @@ export default function TournamentDetailPage() {
   const [guestName, setGuestName] = useState("");
   const embedUrl = `${window.location.origin}/embed/${id}`;
 
-  // Derive the tournament winner from the final match
   const winnerName = useMemo(() => {
     if (!matches.length) return null;
     const maxRound = Math.max(...matches.map((m) => Number(m.round)));
-    // Detect 3rd place round: if last two rounds each have 1 match
     const roundCounts = new Map<number, number>();
     for (const m of matches) {
       const r = Number(m.round);
@@ -146,13 +145,12 @@ export default function TournamentDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-10">
-      {/* Tournament Complete Banner */}
       {isCompletedTournament && (
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
-          className="mb-6 rounded-lg border border-border bg-card px-5 py-4 flex items-center gap-3"
+          className="mb-6 flex items-center gap-3 rounded-lg border border-border bg-card px-5 py-4"
           data-ocid="tournament.success_state"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
@@ -178,9 +176,8 @@ export default function TournamentDetailPage() {
         </motion.div>
       )}
 
-      {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div className="min-w-0 flex-1">
           <div className="mb-2 flex items-center gap-3">
             <h1 className="font-display text-4xl font-black uppercase tracking-wide text-foreground">
               {tournament.name}
@@ -192,12 +189,14 @@ export default function TournamentDetailPage() {
               </span>
             )}
           </div>
-          <p className="text-muted-foreground">{tournament.description}</p>
+          {tournament.description && (
+            <div className="mt-3">
+              <SectionRenderer description={tournament.description} />
+            </div>
+          )}
         </div>
 
-        {/* Actions */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Embed link */}
           <Button
             variant="outline"
             size="sm"
@@ -205,13 +204,12 @@ export default function TournamentDetailPage() {
               navigator.clipboard.writeText(embedUrl);
               toast.success("Embed URL copied!");
             }}
-            className="border-border font-display font-bold uppercase tracking-wide text-xs gap-1"
+            className="gap-1 border-border font-display text-xs font-bold uppercase tracking-wide"
             data-ocid="tournament.embed.button"
           >
             <Code className="h-3 w-3" /> Embed
           </Button>
 
-          {/* Join / Withdraw - for logged-in players, pending tournament, non-managers */}
           {isLoggedIn &&
             !canManage &&
             isPendingTournament &&
@@ -221,7 +219,7 @@ export default function TournamentDetailPage() {
                 size="sm"
                 onClick={handleWithdraw}
                 disabled={withdrawFromTournament.isPending}
-                className="border-border font-display font-bold uppercase tracking-wide text-xs gap-1"
+                className="gap-1 border-border font-display text-xs font-bold uppercase tracking-wide"
                 data-ocid="tournament.withdraw.button"
               >
                 <LogOut className="h-3 w-3" />
@@ -253,7 +251,6 @@ export default function TournamentDetailPage() {
               </p>
             ))}
 
-          {/* Manager (admin or creator): Start tournament */}
           {canManage && isPendingTournament && (
             <Button
               size="sm"
@@ -269,7 +266,6 @@ export default function TournamentDetailPage() {
         </div>
       </div>
 
-      {/* Manager (admin or creator): Add Guest Player */}
       {canManage && isPendingTournament && (
         <div className="mb-6 rounded-lg border border-border bg-card p-4">
           <h3 className="mb-3 font-display text-sm font-bold uppercase tracking-widest text-foreground">
@@ -302,7 +298,6 @@ export default function TournamentDetailPage() {
         </div>
       )}
 
-      {/* Bracket */}
       <div className="rounded-xl border border-primary/30 bg-card shadow-glow">
         <div className="border-b border-border px-6 py-4">
           <h2 className="font-display text-lg font-bold uppercase tracking-wide text-foreground">
