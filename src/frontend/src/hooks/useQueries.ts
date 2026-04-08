@@ -1,15 +1,22 @@
 import type { Principal } from "@icp-sdk/core/principal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
-  AdminStats,
   Match,
   PublicPlayer,
+  PublicUserProfile,
   Tournament,
+  TournamentResult,
+  UserInfo,
   UserProfile,
 } from "../backend.d";
-import type { UserRole } from "../backend.d";
 import { TournamentStatus } from "../backend.d";
 import { useActor } from "./useActor";
+
+type AdminStats = {
+  totalTournaments: bigint;
+  users: UserInfo[];
+  totalUsers: bigint;
+};
 
 export function useAllTournaments() {
   const { actor, isFetching } = useActor();
@@ -189,17 +196,17 @@ export function useCreateTournament() {
       name: string;
       description: string;
       has3rdPlaceMatch: boolean;
+      maxPlayers: bigint;
     }) => {
       if (!actor) throw new Error("Not authenticated");
       return actor.createTournament(
         data.name,
         data.description,
         data.has3rdPlaceMatch,
+        data.maxPlayers,
       );
     },
     onSuccess: (newId, vars) => {
-      // Optimistically add the new tournament to the list immediately
-      // so it shows up without waiting for a re-fetch
       qc.setQueryData(["tournaments"], (old: Tournament[] = []) => [
         ...old,
         {
@@ -210,7 +217,6 @@ export function useCreateTournament() {
           has3rdPlaceMatch: vars.has3rdPlaceMatch,
         } as Tournament,
       ]);
-      // Also invalidate so the list syncs with the server in the background
       qc.invalidateQueries({ queryKey: ["tournaments"] });
     },
   });
@@ -325,21 +331,12 @@ export function useSaveProfile() {
   return useMutation({
     mutationFn: async (profile: UserProfile) => {
       if (!actor) throw new Error("Not authenticated");
-      return actor.saveCallerUserProfile(profile);
+      return actor.saveCallerUserProfile(profile.name, profile.bio ?? "");
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["userProfile"] }),
-  });
-}
-
-export function useAssignRole() {
-  const { actor } = useActor();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (data: { user: Principal; role: UserRole }) => {
-      if (!actor) throw new Error("Not authenticated");
-      return actor.assignCallerUserRole(data.user, data.role);
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["userProfile"] });
+      qc.invalidateQueries({ queryKey: ["callerTournamentHistory"] });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["isAdmin"] }),
   });
 }
 
@@ -359,6 +356,108 @@ export function useKickPlayer() {
   });
 }
 
+// ─── Check-in hooks ─────────────────────────────────────────────────────────
+
+export function useCheckInStatus(tournamentId: bigint | null) {
+  const { actor, isFetching } = useActor();
+  return useQuery<Array<[string, boolean]>>({
+    queryKey: ["checkInStatus", tournamentId?.toString()],
+    queryFn: async () => {
+      if (!actor || tournamentId === null) return [];
+      try {
+        const result = await actor.getTournamentCheckInStatus(tournamentId);
+        if (result.__kind__ === "ok") return result.ok;
+        return [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!actor && !isFetching && tournamentId !== null,
+    refetchInterval: 10_000,
+  });
+}
+
+export function useIsCheckInOpenQuery(tournamentId: bigint | null) {
+  const { actor, isFetching } = useActor();
+  return useQuery<boolean>({
+    queryKey: ["isCheckInOpen", tournamentId?.toString()],
+    queryFn: async () => {
+      if (!actor || tournamentId === null) return false;
+      try {
+        return await actor.isCheckInOpen(tournamentId);
+      } catch {
+        return false;
+      }
+    },
+    enabled: !!actor && !isFetching && tournamentId !== null,
+  });
+}
+
+export function useOpenCheckIn() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (tournamentId: bigint) => {
+      if (!actor) throw new Error("Not authenticated");
+      const result = await actor.openCheckIn(tournamentId);
+      if (result.__kind__ === "err") throw new Error(result.err);
+    },
+    onSuccess: (_d, tournamentId) => {
+      qc.invalidateQueries({
+        queryKey: ["tournament", tournamentId.toString()],
+      });
+      qc.invalidateQueries({ queryKey: ["tournaments"] });
+      qc.invalidateQueries({
+        queryKey: ["checkInStatus", tournamentId.toString()],
+      });
+      qc.invalidateQueries({
+        queryKey: ["isCheckInOpen", tournamentId.toString()],
+      });
+    },
+  });
+}
+
+export function useCloseCheckIn() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (tournamentId: bigint) => {
+      if (!actor) throw new Error("Not authenticated");
+      const result = await actor.closeCheckIn(tournamentId);
+      if (result.__kind__ === "err") throw new Error(result.err);
+    },
+    onSuccess: (_d, tournamentId) => {
+      qc.invalidateQueries({
+        queryKey: ["tournament", tournamentId.toString()],
+      });
+      qc.invalidateQueries({ queryKey: ["tournaments"] });
+      qc.invalidateQueries({
+        queryKey: ["checkInStatus", tournamentId.toString()],
+      });
+      qc.invalidateQueries({
+        queryKey: ["isCheckInOpen", tournamentId.toString()],
+      });
+    },
+  });
+}
+
+export function useCheckIn() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (tournamentId: bigint) => {
+      if (!actor) throw new Error("Not authenticated");
+      const result = await actor.checkIn(tournamentId);
+      if (result.__kind__ === "err") throw new Error(result.err);
+    },
+    onSuccess: (_d, tournamentId) => {
+      qc.invalidateQueries({
+        queryKey: ["checkInStatus", tournamentId.toString()],
+      });
+    },
+  });
+}
+
 export function useReorderPlayers() {
   const { actor } = useActor();
   const qc = useQueryClient();
@@ -366,21 +465,72 @@ export function useReorderPlayers() {
     mutationFn: async (data: {
       tournamentId: bigint;
       orderedNames: string[];
-      // Full player objects so we can update the cache immediately
       players: PublicPlayer[];
     }) => {
       if (!actor) throw new Error("Not authenticated");
       return actor.reorderPlayers(data.tournamentId, data.orderedNames);
     },
     onSuccess: (_d, vars) => {
-      // Update the cache directly with the new order instead of refetching.
-      // A refetch would overwrite local state before the backend confirms the
-      // new order, making shuffle/drag appear to revert.
-      const playerMap = new Map(vars.players.map((p) => [p.name, p]));
-      const reordered = vars.orderedNames
-        .map((name) => playerMap.get(name))
-        .filter(Boolean) as PublicPlayer[];
-      qc.setQueryData(["players", vars.tournamentId.toString()], reordered);
+      qc.setQueryData(["players", vars.tournamentId.toString()], vars.players);
     },
+  });
+}
+
+// ─── Profile hooks ───────────────────────────────────────────────────────────
+
+export function useGetUserByUserId(userId: string) {
+  // Public query — works for anonymous visitors too. The actor hook returns
+  // an anonymous actor when no identity is present, so we only wait for
+  // isFetching to settle rather than gating on !!actor.
+  const { actor, isFetching } = useActor();
+  return useQuery<PublicUserProfile | null>({
+    queryKey: ["publicProfile", userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      if (!actor) return null;
+      try {
+        return await actor.getUserByUserId(userId);
+      } catch {
+        return null;
+      }
+    },
+    enabled: !isFetching && !!userId,
+  });
+}
+
+export function useGetUserTournamentHistory(principalText: string) {
+  // Public query — works for anonymous visitors too. Same pattern as above.
+  const { actor, isFetching } = useActor();
+  return useQuery<TournamentResult[]>({
+    queryKey: ["tournamentHistory", principalText],
+    queryFn: async () => {
+      if (!principalText) return [];
+      if (!actor) return [];
+      try {
+        // The backend expects a Principal type; userId IS the principal text
+        const { Principal } = await import("@icp-sdk/core/principal");
+        const principal = Principal.fromText(principalText);
+        return await actor.getUserTournamentHistory(principal);
+      } catch {
+        return [];
+      }
+    },
+    enabled: !isFetching && !!principalText,
+  });
+}
+
+export function useGetCallerTournamentHistory() {
+  const { actor, isFetching } = useActor();
+  return useQuery<TournamentResult[]>({
+    queryKey: ["callerTournamentHistory"],
+    queryFn: async () => {
+      if (!actor) return [];
+      try {
+        return await actor.getCallerTournamentHistory();
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!actor && !isFetching,
   });
 }

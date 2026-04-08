@@ -1,0 +1,144 @@
+// Version: 3.0.0
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type MatchRecord__370719934 =
+  {
+    player1Name : Text;
+    player2Name : Text;
+    round : Nat;
+    score1 : Int;
+    score2 : Int;
+    slot : Nat;
+    status : {#completed; #scheduled};
+    winnerId : ?Principal
+  };
+type MatchStatus__1001822333 = {#completed; #scheduled};
+type Match__564601088 =
+  {
+    player1Name : Text;
+    player2Name : Text;
+    round : Nat;
+    score1 : Int;
+    score2 : Int;
+    slot : Nat;
+    status : MatchStatus__1001822333;
+    winnerId : ?Principal
+  };
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type OldUserProfile__416069324 = {name : Text; rjzProfileLink : Text};
+type PlayerRecord__390824200 =
+  {
+    id : ?Principal;
+    name : Text;
+    playerType : {#guestPlayer; #registeredPlayer}
+  };
+type PlayerType__859034376 = {#guestPlayer; #registeredPlayer};
+type Player__3343875 =
+  {id : ?Principal; name : Text; playerType : PlayerType__859034376};
+type TournamentRecord__196083928 =
+  {
+    description : Text;
+    game : Text;
+    has3rdPlaceMatch : Bool;
+    id : Nat;
+    isCheckInOpen : Bool;
+    maxPlayers : ?Nat;
+    name : Text;
+    status : {#active; #completed; #pending}
+  };
+type TournamentStatus__343791570 = {#active; #completed; #pending};
+type Tournament__586792266 =
+  {
+    description : Text;
+    game : Text;
+    has3rdPlaceMatch : Bool;
+    id : Nat;
+    isCheckInOpen : Bool;
+    maxPlayers : ?Nat;
+    name : Text;
+    status : TournamentStatus__343791570
+  };
+type UserProfile__491224006 =
+  {bio : Text; name : Text; rjzProfileLink : Text; userId : Text};
+type UserRole__599675725 = {#admin; #guest; #user};
+type UserRole__717262347 = {#admin; #guest; #user};
+actor ({
+  in var adminAssigned : Bool;
+  in bannedUsers : Map__605269027<Principal, Bool>;
+  in checkInStatus : Map__605269027<Nat, [(Text, Bool)]>;
+  in var nextTournamentId : Nat;
+  in players : Map__605269027<Nat, [PlayerRecord__390824200]>;
+  in var stableAdminAssigned : Bool;
+  in var stableBannedUsers : [(Principal, Bool)];
+  in var stableCheckInStatus : [(Nat, [(Text, Bool)])];
+  in var stableMatches : [(Nat, [MatchRecord__370719934])];
+  in var stablePlayers : [(Nat, [PlayerRecord__390824200])];
+  in var stableTournamentCreators : [(Nat, Principal)];
+  in var stableTournaments : [(Nat, TournamentRecord__196083928)];
+  in var stableUserProfiles : [(Principal, OldUserProfile__416069324)];
+  in var stableUserRoles : [(Principal, UserRole__717262347)];
+  in tournamentCreators : Map__605269027<Nat, Principal>;
+  in tournamentMatches : Map__605269027<Nat, [MatchRecord__370719934]>;
+  in tournaments : Map__605269027<Nat, TournamentRecord__196083928>;
+  in userProfiles : Map__605269027<Principal, OldUserProfile__416069324>;
+  in userRoles : Map__605269027<Principal, UserRole__717262347>
+}, {
+  stable var adminAssigned : Bool;
+  stable bannedUsers :
+    {var root : Node__46230540<Principal, Bool>; var size : Nat__490723111};
+  stable checkInStatus :
+    {
+      var root : Node__46230540<Nat, [(Text, Bool)]>;
+      var size : Nat__490723111
+    };
+  stable var nextTournamentId : Nat;
+  stable players :
+    {
+      var root : Node__46230540<Nat, [Player__3343875]>;
+      var size : Nat__490723111
+    };
+  stable var stableAdminAssigned : Bool;
+  stable var stableBannedUsers : [(Principal, Bool)];
+  stable var stableCheckInStatus : [(Nat, [(Text, Bool)])];
+  stable var stableMatches : [(Nat, [Match__564601088])];
+  stable var stablePlayers : [(Nat, [Player__3343875])];
+  stable var stableTournamentCreators : [(Nat, Principal)];
+  stable var stableTournaments : [(Nat, Tournament__586792266)];
+  stable var stableUserIdIndex : [(Text, Principal)];
+  stable var stableUserProfiles : [(Principal, UserProfile__491224006)];
+  stable var stableUserRoles : [(Principal, UserRole__599675725)];
+  stable tournamentCreators :
+    {var root : Node__46230540<Nat, Principal>; var size : Nat__490723111};
+  stable tournamentMatches :
+    {
+      var root : Node__46230540<Nat, [Match__564601088]>;
+      var size : Nat__490723111
+    };
+  stable tournaments :
+    {
+      var root : Node__46230540<Nat, Tournament__586792266>;
+      var size : Nat__490723111
+    };
+  stable userIdIndex :
+    {var root : Node__46230540<Text, Principal>; var size : Nat__490723111};
+  stable userProfiles :
+    {
+      var root : Node__46230540<Principal, UserProfile__491224006>;
+      var size : Nat__490723111
+    };
+  stable userRoles :
+    {
+      var root : Node__46230540<Principal, UserRole__599675725>;
+      var size : Nat__490723111
+    }
+}) ;

@@ -4,7 +4,20 @@ import { GripVertical, Shuffle, X } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { PublicPlayer } from "../backend.d";
-import { useKickPlayer, useReorderPlayers } from "../hooks/useQueries";
+import {
+  useAddGuestPlayer,
+  useKickPlayer,
+  useReorderPlayers,
+} from "../hooks/useQueries";
+
+// Internal type adds a stable slot key so same-name guests are distinguishable
+interface SlottedPlayer extends PublicPlayer {
+  _slotKey: string;
+}
+
+function toSlotted(players: PublicPlayer[]): SlottedPlayer[] {
+  return players.map((p, i) => ({ ...p, _slotKey: `${p.name}#${i}` }));
+}
 
 interface PreviewBracketProps {
   players: PublicPlayer[];
@@ -19,7 +32,7 @@ interface PreviewMatch {
   player2Name: string;
 }
 
-function buildPreviewMatches(players: PublicPlayer[]): PreviewMatch[] {
+function buildPreviewMatches(players: SlottedPlayer[]): PreviewMatch[] {
   const n = players.length;
   if (n < 2) return [];
   const numRounds = Math.ceil(Math.log2(n));
@@ -94,18 +107,22 @@ export default function PreviewBracket({
   tournamentId,
   isAdmin,
 }: PreviewBracketProps) {
-  const [localPlayers, setLocalPlayers] = useState<PublicPlayer[]>(players);
+  const [localPlayers, setLocalPlayers] = useState<SlottedPlayer[]>(() =>
+    toSlotted(players),
+  );
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const dragNode = useRef<HTMLDivElement | null>(null);
 
   const kickPlayer = useKickPlayer();
   const reorderPlayers = useReorderPlayers();
+  const addGuestPlayer = useAddGuestPlayer();
 
+  // Sync with incoming prop changes (e.g. after a guest is added/removed)
   const prevPlayersRef = useRef<PublicPlayer[]>(players);
   if (prevPlayersRef.current !== players) {
     prevPlayersRef.current = players;
-    setLocalPlayers(players);
+    setLocalPlayers(toSlotted(players));
   }
 
   const handleDragStart = useCallback((e: React.DragEvent, idx: number) => {
@@ -133,11 +150,15 @@ export default function PreviewBracket({
       setLocalPlayers(reordered);
       setDragIdx(null);
       setDragOverIdx(null);
+      // Strip back to PublicPlayer for the backend call
+      const asPublic: PublicPlayer[] = reordered.map(
+        ({ _slotKey: _sk, ...p }) => p,
+      );
       reorderPlayers.mutate(
         {
           tournamentId,
           orderedNames: reordered.map((p) => p.name),
-          players: reordered,
+          players: asPublic,
         },
         {
           onSuccess: () => toast.success("Seeds reordered!"),
@@ -153,18 +174,60 @@ export default function PreviewBracket({
     setDragOverIdx(null);
   }, []);
 
+  /**
+   * Kick by slotKey.
+   *
+   * Because the backend removes ALL players with the given name, we:
+   *   1. Remove the target from local state immediately (optimistic).
+   *   2. Call kickPlayer (removes ALL same-name entries from backend).
+   *   3. Re-add every same-name player that was NOT the one we kicked.
+   *
+   * This keeps one-at-a-time removal correct even for duplicate guest names.
+   */
   const handleKick = useCallback(
-    (playerName: string) => {
-      setLocalPlayers((prev) => prev.filter((p) => p.name !== playerName));
+    (slotKey: string, playerName: string) => {
+      // Capture same-name duplicates BEFORE mutating local state
+      const sameNameOthers = localPlayers.filter(
+        (p) => p.name === playerName && p._slotKey !== slotKey,
+      );
+
+      // Optimistic local removal — only remove the one slot
+      setLocalPlayers((prev) => prev.filter((p) => p._slotKey !== slotKey));
+
       kickPlayer.mutate(
         { tournamentId, playerName },
         {
-          onSuccess: () => toast.success(`${playerName} removed from bracket`),
-          onError: () => toast.error("Failed to kick player"),
+          onSuccess: () => {
+            // Re-add the duplicates the backend removed along with the target
+            if (sameNameOthers.length > 0) {
+              let pending = sameNameOthers.length;
+              for (const p of sameNameOthers) {
+                addGuestPlayer.mutate(
+                  { tournamentId, name: p.name },
+                  {
+                    onSettled: () => {
+                      pending--;
+                      if (pending === 0) {
+                        // Final toast after all re-adds finish
+                        toast.success(`${playerName} removed from bracket`);
+                      }
+                    },
+                  },
+                );
+              }
+            } else {
+              toast.success(`${playerName} removed from bracket`);
+            }
+          },
+          onError: () => {
+            // Roll back optimistic removal
+            setLocalPlayers(toSlotted(prevPlayersRef.current));
+            toast.error("Failed to kick player");
+          },
         },
       );
     },
-    [tournamentId, kickPlayer],
+    [localPlayers, tournamentId, kickPlayer, addGuestPlayer],
   );
 
   const handleShuffle = useCallback(() => {
@@ -174,11 +237,14 @@ export default function PreviewBracket({
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     setLocalPlayers(shuffled);
+    const asPublic: PublicPlayer[] = shuffled.map(
+      ({ _slotKey: _sk, ...p }) => p,
+    );
     reorderPlayers.mutate(
       {
         tournamentId,
         orderedNames: shuffled.map((p) => p.name),
-        players: shuffled,
+        players: asPublic,
       },
       {
         onSuccess: () => toast.success("Seeds shuffled!"),
@@ -249,7 +315,7 @@ export default function PreviewBracket({
           <div className="flex flex-col gap-1">
             {localPlayers.map((player, idx) => (
               <div
-                key={player.name}
+                key={player._slotKey}
                 ref={idx === dragIdx ? dragNode : null}
                 draggable={isAdmin}
                 onDragStart={
@@ -287,7 +353,7 @@ export default function PreviewBracket({
                 {isAdmin && (
                   <button
                     type="button"
-                    onClick={() => handleKick(player.name)}
+                    onClick={() => handleKick(player._slotKey, player.name)}
                     className="shrink-0 rounded p-0.5 text-muted-foreground/40 transition-colors hover:bg-destructive/20 hover:text-destructive"
                     data-ocid={`bracket.delete_button.${idx + 1}`}
                     title={`Remove ${player.name}`}

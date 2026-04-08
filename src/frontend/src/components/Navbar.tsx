@@ -7,20 +7,32 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Heart, Menu, Plus, Trophy, User, X } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useIsAdmin } from "../hooks/useQueries";
+import {
+  useAllTournaments,
+  useIsAdmin,
+  useUserProfile,
+} from "../hooks/useQueries";
 import DonationModal from "./DonationModal";
 
 export default function Navbar() {
   const { login, clear, identity, isLoggingIn, loginStatus } =
     useInternetIdentity();
   const { data: isAdmin } = useIsAdmin();
+  const { data: profile } = useUserProfile();
+  const { data: tournaments = [] } = useAllTournaments();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [donationOpen, setDonationOpen] = useState(false);
   const navigate = useNavigate();
 
   const isLoggedIn = loginStatus === "success" && !!identity;
+
+  // Show alert dot if user has joined any tournament that currently has check-in open
+  const hasCheckInAlert = useMemo(() => {
+    if (!isLoggedIn || !profile?.name) return false;
+    return tournaments.some((t) => t.isCheckInOpen);
+  }, [isLoggedIn, profile, tournaments]);
 
   const handleLogout = () => {
     clear();
@@ -42,10 +54,17 @@ export default function Navbar() {
         <nav className="hidden items-center gap-6 md:flex">
           <Link
             to="/tournaments"
-            className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
+            className="relative font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
             data-ocid="nav.tournaments.link"
           >
             Tournaments
+            {hasCheckInAlert && (
+              <span
+                className="absolute -right-2.5 -top-1 h-2 w-2 rounded-full bg-yellow-400"
+                title="Check-in is open for a tournament you joined"
+                data-ocid="nav.checkin.alert_dot"
+              />
+            )}
           </Link>
           {isLoggedIn && (
             <Link
@@ -154,11 +173,17 @@ export default function Navbar() {
           <nav className="flex flex-col gap-1 p-4">
             <Link
               to="/tournaments"
-              className="rounded px-3 py-2 font-display font-semibold uppercase tracking-wider text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="relative rounded px-3 py-2 font-display font-semibold uppercase tracking-wider text-muted-foreground hover:bg-muted hover:text-foreground"
               onClick={() => setMobileOpen(false)}
               data-ocid="nav.mobile.tournaments.link"
             >
               Tournaments
+              {hasCheckInAlert && (
+                <span
+                  className="absolute right-2 top-2 h-2 w-2 rounded-full bg-yellow-400"
+                  data-ocid="nav.mobile.checkin.alert_dot"
+                />
+              )}
             </Link>
             {isLoggedIn && (
               <Link

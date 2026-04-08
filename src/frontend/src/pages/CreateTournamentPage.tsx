@@ -24,6 +24,7 @@ export default function CreateTournamentPage() {
   const [description, setDescription] = useState("");
   const [sectionsValue, setSectionsValue] = useState("");
   const [has3rdPlace, setHas3rdPlace] = useState(false);
+  const [maxPlayersInput, setMaxPlayersInput] = useState("");
   const [showDonation, setShowDonation] = useState(false);
 
   if (loginStatus === "initializing") {
@@ -77,6 +78,10 @@ export default function CreateTournamentPage() {
         name: name.trim(),
         description: combined,
         has3rdPlaceMatch: has3rdPlace,
+        maxPlayers:
+          maxPlayersInput && Number.parseInt(maxPlayersInput, 10) >= 2
+            ? BigInt(Number.parseInt(maxPlayersInput, 10))
+            : 0n,
       });
       toast.success("Tournament created!");
       setShowDonation(true);
@@ -159,6 +164,29 @@ export default function CreateTournamentPage() {
               >
                 Include 3rd Place Match
               </Label>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="maxPlayers"
+                className="font-display text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              >
+                Max Players (optional)
+              </Label>
+              <Input
+                id="maxPlayers"
+                type="number"
+                min={2}
+                step={1}
+                value={maxPlayersInput}
+                onChange={(e) => setMaxPlayersInput(e.target.value)}
+                placeholder="Unlimited"
+                className="bg-background"
+                data-ocid="create_tournament.max_players_input"
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank or set to 0 for no cap. Minimum 2.
+              </p>
             </div>
             <Button
               type="submit"

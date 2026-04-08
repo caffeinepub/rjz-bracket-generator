@@ -23,59 +23,122 @@ export interface Match {
 export type MatchStatus = { 'scheduled' : null } |
   { 'completed' : null };
 export interface PublicPlayer { 'isGuest' : boolean, 'name' : string }
+export interface PublicUserProfile {
+  'bio' : string,
+  'userId' : string,
+  'goldTrophies' : bigint,
+  'name' : string,
+  'silverTrophies' : bigint,
+  'bronzeTrophies' : bigint,
+}
 export interface Tournament {
   'id' : bigint,
   'status' : TournamentStatus,
   'has3rdPlaceMatch' : boolean,
+  'game' : string,
   'name' : string,
   'description' : string,
+  'isCheckInOpen' : boolean,
+  'maxPlayers' : [] | [bigint],
+}
+export interface TournamentResult {
+  'placedGold' : boolean,
+  'eliminatedAtStage' : string,
+  'tournamentName' : string,
+  'placedSilver' : boolean,
+  'placedBronze' : boolean,
+  'eliminatedByName' : string,
+  'tournamentId' : bigint,
 }
 export type TournamentStatus = { 'active' : null } |
   { 'pending' : null } |
   { 'completed' : null };
-export interface UserProfile { 'name' : string, 'rjzProfileLink' : string }
-export type UserRole = { 'admin' : null } |
-  { 'user' : null } |
-  { 'guest' : null };
 export interface UserInfo {
   'principal' : Principal,
   'name' : string,
-  'tournamentCount' : bigint,
   'isBanned' : boolean,
+  'tournamentCount' : bigint,
 }
-export interface AdminStats {
-  'totalUsers' : bigint,
-  'totalTournaments' : bigint,
-  'users' : Array<UserInfo>,
+export interface UserProfile {
+  'bio' : string,
+  'userId' : string,
+  'name' : string,
+  'rjzProfileLink' : string,
 }
 export interface _SERVICE {
-  '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'addGuestPlayer' : ActorMethod<[bigint, string], undefined>,
-  'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'banUser' : ActorMethod<[Principal], undefined>,
-  'unbanUser' : ActorMethod<[Principal], undefined>,
-  'createTournament' : ActorMethod<[string, string, boolean], bigint>,
+  /**
+   * / Player checks in to a tournament. Must be a registered player in this tournament.
+   */
+  'checkIn' : ActorMethod<[bigint], { 'ok' : null } | { 'err' : string }>,
+  /**
+   * / Close check-in for a tournament. Only tournament creator or admin.
+   */
+  'closeCheckIn' : ActorMethod<[bigint], { 'ok' : null } | { 'err' : string }>,
+  'createTournament' : ActorMethod<[string, string, boolean, bigint], bigint>,
   'deleteTournament' : ActorMethod<[bigint], undefined>,
-  'getAdminStats' : ActorMethod<[], AdminStats>,
+  'getAdminStats' : ActorMethod<
+    [],
+    {
+      'totalTournaments' : bigint,
+      'users' : Array<UserInfo>,
+      'totalUsers' : bigint,
+    }
+  >,
   'getAllTournaments' : ActorMethod<[], Array<Tournament>>,
   'getBracketMatches' : ActorMethod<[bigint], Array<Match>>,
+  /**
+   * / Get tournament history for the caller. Most recent first.
+   */
+  'getCallerTournamentHistory' : ActorMethod<[], Array<TournamentResult>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
-  'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getTournament' : ActorMethod<[bigint], [] | [Tournament]>,
+  /**
+   * / Get check-in status for all players in a tournament. Public query.
+   * / Returns [(playerDisplayName, hasCheckedIn)] for registered players.
+   */
+  'getTournamentCheckInStatus' : ActorMethod<
+    [bigint],
+    { 'ok' : Array<[string, boolean]> } |
+      { 'err' : string }
+  >,
   'getTournamentPlayers' : ActorMethod<[bigint], Array<PublicPlayer>>,
+  /**
+   * / Look up a public profile by unique userId. No auth required.
+   */
+  'getUserByUserId' : ActorMethod<[string], [] | [PublicUserProfile]>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  /**
+   * / Get tournament history for any user by principal. No auth required.
+   */
+  'getUserTournamentHistory' : ActorMethod<
+    [Principal],
+    Array<TournamentResult>
+  >,
+  'initialize' : ActorMethod<[string], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'isCallerJoinedTournament' : ActorMethod<[bigint], boolean>,
   'isCallerTournamentCreator' : ActorMethod<[bigint], boolean>,
+  /**
+   * / Check whether check-in is open for a tournament. Public query.
+   */
+  'isCheckInOpen' : ActorMethod<[bigint], boolean>,
   'joinTournament' : ActorMethod<[bigint], undefined>,
   'kickPlayer' : ActorMethod<[bigint, string], undefined>,
+  /**
+   * / Open check-in for a tournament. Only tournament creator or admin.
+   * / Initializes all current registered players as not checked in.
+   */
+  'openCheckIn' : ActorMethod<[bigint], { 'ok' : null } | { 'err' : string }>,
   'reorderPlayers' : ActorMethod<[bigint, Array<string>], undefined>,
   'reportMatch' : ActorMethod<
     [bigint, bigint, bigint, bigint, bigint, [] | [Principal]],
     undefined
   >,
-  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'saveCallerUserProfile' : ActorMethod<[string, string], undefined>,
   'startTournament' : ActorMethod<[bigint], undefined>,
+  'unbanUser' : ActorMethod<[Principal], undefined>,
   'withdrawFromTournament' : ActorMethod<[bigint], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;

@@ -127,6 +127,7 @@ export default function AdminPage() {
         name: name.trim(),
         description: description.trim(),
         has3rdPlaceMatch: has3rdPlace,
+        maxPlayers: 0n,
       });
       toast.success("Tournament created!");
       setName("");

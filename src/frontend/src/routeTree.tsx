@@ -5,6 +5,7 @@ import CreateTournamentPage from "./pages/CreateTournamentPage";
 import EmbedPage from "./pages/EmbedPage";
 import HomePage from "./pages/HomePage";
 import ProfilePage from "./pages/ProfilePage";
+import PublicProfilePage from "./pages/PublicProfilePage";
 import TournamentDetailPage from "./pages/TournamentDetailPage";
 import TournamentsPage from "./pages/TournamentsPage";
 
@@ -38,6 +39,14 @@ const profileRoute = createRoute({
   path: "/profile",
   component: ProfilePage,
 });
+const publicProfileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/profile/$userId",
+  component: () => {
+    const { userId } = publicProfileRoute.useParams();
+    return <PublicProfilePage userId={userId} />;
+  },
+});
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin",
@@ -55,6 +64,7 @@ export const routeTree = rootRoute.addChildren([
   tournamentDetailRoute,
   embedRoute,
   profileRoute,
+  publicProfileRoute,
   adminRoute,
   createTournamentRoute,
 ]);

@@ -1,31 +1,17 @@
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RJZ Bracket Generator – Free Tournament Bracket Tool for Esports</title>
-    <meta name="description" content="Create and manage single elimination tournament brackets for free. Register players, seed your roster, embed live brackets on any site, and run your esports events with ease." />
-    <!-- Extract admin token from URL before any library initializes to prevent auth state corruption -->
-    <script>
-      (function () {
-        try {
-          var paramName = "caffeineAdminToken";
-          var searchParams = new URLSearchParams(window.location.search);
-          var token = searchParams.get(paramName);
-          if (token !== null) {
-            try { sessionStorage.setItem(paramName, token); } catch (e) {}
-            searchParams.delete(paramName);
-            var newSearch = searchParams.toString();
-            var newUrl =
-              window.location.pathname +
-              (newSearch ? "?" + newSearch : "") +
-              window.location.hash;
-            window.history.replaceState(null, "", newUrl);
-          }
-        } catch (e) {}
-      })();
-    </script>
-    <script type="module" crossorigin src="/assets/index-CrrRb3tE.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-D--MxM_Y.css">
+    <title>RJZ Bracket Generator</title>
+    <meta name="description" content="Built with caffeine.ai" />
+    <meta property="og:title" content="RJZ Bracket Generator" />
+    <meta property="og:description" content="Built with caffeine.ai" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <script type="module" crossorigin src="/assets/index-CMyWRRNW.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Cwv9gU9r.css">
   </head>
   <body>
     <div id="root"></div>

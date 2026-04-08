@@ -58,7 +58,11 @@ export default function HomePage() {
           const plainDesc = t.description?.includes("<!-- SECTION:")
             ? t.description.split("<!-- SECTION:")[0].toLowerCase()
             : (t.description ?? "").toLowerCase();
-          return t.name.toLowerCase().includes(q) || plainDesc.includes(q);
+          return (
+            t.name.toLowerCase().includes(q) ||
+            plainDesc.includes(q) ||
+            (t.game?.toLowerCase() ?? "").includes(q)
+          );
         })
         .sort(
           (a, b) =>
