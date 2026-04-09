@@ -2,7 +2,7 @@ import { useParams, useSearch } from "@tanstack/react-router";
 import { Trophy } from "lucide-react";
 import BracketView from "../components/BracketView";
 import { statusBadge } from "../components/TournamentCard";
-import { useBracketMatches, useTournament } from "../hooks/useQueries";
+import { useGetBracketMatchesLinked, useTournament } from "../hooks/useQueries";
 
 const redThemeVars: Record<string, string> = {
   "--primary": "0.6 0.22 25",
@@ -20,7 +20,7 @@ export default function EmbedPage() {
   const tournamentId = BigInt(id);
 
   const { data: tournament, isPending } = useTournament(tournamentId);
-  const { data: matches = [] } = useBracketMatches(tournamentId);
+  const { data: matches = [] } = useGetBracketMatchesLinked(tournamentId);
 
   const themeStyle =
     theme === "red" ? (redThemeVars as React.CSSProperties) : {};

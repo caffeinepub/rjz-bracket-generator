@@ -3,13 +3,14 @@ import { Input } from "@/components/ui/input";
 import { CheckCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import type { Match, PublicPlayer } from "../backend.d";
+import type { PublicPlayer } from "../backend.d";
 import { MatchStatus } from "../backend.d";
 import { useReportMatch } from "../hooks/useQueries";
+import type { LinkedMatch } from "../types/bracket";
 import PreviewBracket from "./PreviewBracket";
 
 interface BracketViewProps {
-  matches: Match[];
+  matches: LinkedMatch[];
   tournamentId: bigint;
   currentPlayerName?: string;
   isAdmin?: boolean;
@@ -19,11 +20,37 @@ interface BracketViewProps {
 }
 
 interface MatchNodeProps {
-  match: Match;
+  match: LinkedMatch;
   tournamentId: bigint;
   currentPlayerName?: string;
   isAdmin?: boolean;
   readOnly?: boolean;
+}
+
+/** Renders a player name — clickable profile link when userId is present */
+function PlayerName({
+  name,
+  userId,
+}: {
+  name: string;
+  userId: [] | [string] | undefined;
+}) {
+  const resolvedId = userId && userId.length > 0 ? userId[0] : null;
+  if (!resolvedId || name === "TBD") {
+    return <span className="truncate text-xs font-semibold">{name}</span>;
+  }
+  return (
+    <a
+      href={`/profile/${resolvedId}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="truncate text-xs font-semibold transition-colors duration-150 hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+      aria-label={`View ${name}'s profile`}
+      data-ocid="bracket.player.profile_link"
+    >
+      {name}
+    </a>
+  );
 }
 
 function MatchNode({
@@ -88,8 +115,8 @@ function MatchNode({
             : "text-muted-foreground"
         }`}
       >
-        <span className="truncate text-xs font-semibold">{p1}</span>
-        <span className="ml-1 text-xs font-bold">
+        <PlayerName name={p1} userId={match.player1UserId} />
+        <span className="ml-1 shrink-0 text-xs font-bold">
           {isCompleted ? Number(match.score1) : ""}
         </span>
       </div>
@@ -101,8 +128,8 @@ function MatchNode({
             : "text-muted-foreground"
         }`}
       >
-        <span className="truncate text-xs font-semibold">{p2}</span>
-        <span className="ml-1 text-xs font-bold">
+        <PlayerName name={p2} userId={match.player2UserId} />
+        <span className="ml-1 shrink-0 text-xs font-bold">
           {isCompleted ? Number(match.score2) : ""}
         </span>
       </div>
@@ -161,7 +188,7 @@ export default function BracketView({
 }: BracketViewProps) {
   const rounds = useMemo(() => {
     if (!matches.length) return [];
-    const roundMap = new Map<number, Match[]>();
+    const roundMap = new Map<number, LinkedMatch[]>();
     for (const m of matches) {
       const r = Number(m.round);
       if (!roundMap.has(r)) roundMap.set(r, []);

@@ -10,6 +10,7 @@ import type {
   UserProfile,
 } from "../backend.d";
 import { TournamentStatus } from "../backend.d";
+import type { LinkedMatch } from "../types/bracket";
 import { useActor } from "./useActor";
 
 type AdminStats = {
@@ -49,6 +50,43 @@ export function useBracketMatches(tournamentId: bigint | null) {
     queryFn: async () => {
       if (!actor || tournamentId === null) return [];
       return actor.getBracketMatches(tournamentId);
+    },
+    enabled: !!actor && !isFetching && tournamentId !== null,
+  });
+}
+
+export function useGetBracketMatchesLinked(tournamentId: bigint | null) {
+  const { actor, isFetching } = useActor();
+  return useQuery<LinkedMatch[]>({
+    queryKey: ["matchesLinked", tournamentId?.toString()],
+    queryFn: async () => {
+      if (!actor || tournamentId === null) return [];
+      try {
+        // Try the new linked endpoint first; fall back to plain matches
+        const actorAny = actor as unknown as Record<string, unknown>;
+        if (typeof actorAny.getBracketMatchesLinked === "function") {
+          const result = await (
+            actorAny.getBracketMatchesLinked as (
+              id: bigint,
+            ) => Promise<LinkedMatch[]>
+          )(tournamentId);
+          return result;
+        }
+        // Fallback: use plain matches with no userId info
+        const plain = await actor.getBracketMatches(tournamentId);
+        return plain.map((m) => ({
+          ...m,
+          player1UserId: [] as [] | [string],
+          player2UserId: [] as [] | [string],
+        }));
+      } catch {
+        const plain = await actor.getBracketMatches(tournamentId);
+        return plain.map((m) => ({
+          ...m,
+          player1UserId: [] as [] | [string],
+          player2UserId: [] as [] | [string],
+        }));
+      }
     },
     enabled: !!actor && !isFetching && tournamentId !== null,
   });
@@ -233,6 +271,7 @@ export function useStartTournament() {
     onSuccess: (_d, id) => {
       qc.invalidateQueries({ queryKey: ["tournament", id.toString()] });
       qc.invalidateQueries({ queryKey: ["matches", id.toString()] });
+      qc.invalidateQueries({ queryKey: ["matchesLinked", id.toString()] });
       qc.invalidateQueries({ queryKey: ["tournaments"] });
     },
   });
@@ -316,6 +355,9 @@ export function useReportMatch() {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({
         queryKey: ["matches", vars.tournamentId.toString()],
+      });
+      qc.invalidateQueries({
+        queryKey: ["matchesLinked", vars.tournamentId.toString()],
       });
       qc.invalidateQueries({
         queryKey: ["tournament", vars.tournamentId.toString()],

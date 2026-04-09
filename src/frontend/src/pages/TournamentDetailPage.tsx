@@ -25,10 +25,10 @@ import { statusBadge } from "../components/TournamentCard";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useAddGuestPlayer,
-  useBracketMatches,
   useCheckIn,
   useCheckInStatus,
   useCloseCheckIn,
+  useGetBracketMatchesLinked,
   useIsAdmin,
   useIsCallerJoinedTournament,
   useIsCallerTournamentCreator,
@@ -49,7 +49,7 @@ export default function TournamentDetailPage() {
 
   const { data: tournament, isLoading } = useTournament(tournamentId);
   const { data: matches = [], isLoading: matchesLoading } =
-    useBracketMatches(tournamentId);
+    useGetBracketMatchesLinked(tournamentId);
   const { data: players = [] } = useTournamentPlayers(tournamentId);
   const { data: isAdmin } = useIsAdmin();
   const { data: isTournamentCreator } =

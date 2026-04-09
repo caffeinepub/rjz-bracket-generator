@@ -1,18 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { Link } from "@tanstack/react-router";
 import {
   Ban,
   CheckCircle,
-  Loader2,
   Play,
-  Plus,
   Search,
   ShieldAlert,
   Trash2,
@@ -22,14 +17,12 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import { TournamentStatus } from "../backend.d";
-import DonationModal from "../components/DonationModal";
 import TournamentCard from "../components/TournamentCard";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useAdminStats,
   useAllTournaments,
   useBanUser,
-  useCreateTournament,
   useDeleteTournament,
   useIsAdmin,
   useStartTournament,
@@ -43,16 +36,11 @@ export default function AdminPage() {
   const { data: tournaments = [], isLoading: tournamentsLoading } =
     useAllTournaments();
   const { data: adminStats, isLoading: statsLoading } = useAdminStats();
-  const createTournament = useCreateTournament();
   const startTournament = useStartTournament();
   const deleteTournament = useDeleteTournament();
   const banUser = useBanUser();
   const unbanUser = useUnbanUser();
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [has3rdPlace, setHas3rdPlace] = useState(false);
-  const [showDonation, setShowDonation] = useState(false);
   const [userSearch, setUserSearch] = useState("");
 
   if (loginStatus === "initializing") {
@@ -115,29 +103,6 @@ export default function AdminPage() {
       </div>
     );
   }
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) {
-      toast.error("Tournament name is required");
-      return;
-    }
-    try {
-      await createTournament.mutateAsync({
-        name: name.trim(),
-        description: description.trim(),
-        has3rdPlaceMatch: has3rdPlace,
-        maxPlayers: 0n,
-      });
-      toast.success("Tournament created!");
-      setName("");
-      setDescription("");
-      setHas3rdPlace(false);
-      setShowDonation(true);
-    } catch {
-      toast.error("Failed to create tournament");
-    }
-  };
 
   const handleStart = async (id: bigint) => {
     try {
@@ -326,84 +291,6 @@ export default function AdminPage() {
 
       <Separator className="mb-8" />
 
-      <Card className="mb-8 border-border bg-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 font-display text-lg uppercase tracking-wide">
-            <Plus className="h-5 w-5 text-primary" /> Create New Tournament
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="tournamentName"
-                className="font-display text-xs font-bold uppercase tracking-widest text-muted-foreground"
-              >
-                Tournament Name
-              </Label>
-              <Input
-                id="tournamentName"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. RJZ Summer Open"
-                required
-                className="bg-background"
-                data-ocid="admin.tournament_name.input"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="tournamentDesc"
-                className="font-display text-xs font-bold uppercase tracking-widest text-muted-foreground"
-              >
-                Description
-              </Label>
-              <Textarea
-                id="tournamentDesc"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe the tournament..."
-                rows={3}
-                className="bg-background resize-none"
-                data-ocid="admin.tournament_desc.textarea"
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch
-                id="has3rdPlace"
-                checked={has3rdPlace}
-                onCheckedChange={setHas3rdPlace}
-                data-ocid="admin.has3rd_place.switch"
-              />
-              <Label
-                htmlFor="has3rdPlace"
-                className="cursor-pointer text-sm text-foreground"
-              >
-                Include 3rd Place Match
-              </Label>
-            </div>
-            <Button
-              type="submit"
-              disabled={createTournament.isPending}
-              className="bg-primary font-display font-bold uppercase tracking-wide text-white"
-              data-ocid="admin.create_tournament.submit_button"
-            >
-              {createTournament.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...
-                </>
-              ) : (
-                <>
-                  <Plus className="mr-2 h-4 w-4" /> Create Tournament
-                </>
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Separator className="mb-8" />
-
       <div>
         <h2 className="mb-4 font-display text-xl font-bold uppercase tracking-wide text-foreground">
           All Tournaments
@@ -470,9 +357,7 @@ export default function AdminPage() {
             className="rounded-lg border border-dashed border-border py-12 text-center"
             data-ocid="admin.tournaments.empty_state"
           >
-            <p className="text-sm text-muted-foreground">
-              No tournaments yet. Create your first one above!
-            </p>
+            <p className="text-sm text-muted-foreground">No tournaments yet.</p>
           </div>
         ) : (
           <div
@@ -497,11 +382,6 @@ export default function AdminPage() {
           </div>
         )}
       </div>
-
-      <DonationModal
-        open={showDonation}
-        onClose={() => setShowDonation(false)}
-      />
     </div>
   );
 }

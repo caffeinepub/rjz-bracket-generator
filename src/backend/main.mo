@@ -6,9 +6,9 @@ import Int "mo:core/Int";
 import Runtime "mo:core/Runtime";
 import Order "mo:core/Order";
 import Principal "mo:core/Principal";
-import Migration "migration";
 
-(with migration = Migration.run)
+
+
 actor {
 
   // ── Access Control ──────────────────────────────────────────────────────────
